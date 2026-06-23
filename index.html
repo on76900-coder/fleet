@@ -502,11 +502,32 @@ body::before {
 
     <div class="card" style="margin-bottom:16px">
       <div class="ct">🚚 إعداد الرحلة</div>
-      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
-        <div>
-          <label style="display:block;font-size:11px;color:#8a9ab8;margin-bottom:5px">العربية</label>
-          <select id="gps-truck-sel" class="fsel" style="min-width:200px" onchange="gpsTruckChanged()"></select>
+      <!-- خانة البحث واختيار العربية — للسواق على الموبايل -->
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:13px;color:#8a9ab8;margin-bottom:8px;font-weight:700">🔢 رقم العربية</label>
+        <div style="position:relative">
+          <input id="gps-truck-search" type="text" inputmode="numeric" pattern="[0-9]*"
+            placeholder="اكتب رقم العربية..."
+            style="width:100%;background:#0d1422;border:2px solid rgba(255,140,0,.4);border-radius:10px;padding:14px 16px;color:#ffad33;font-size:22px;font-weight:800;font-family:inherit;outline:none;direction:ltr;text-align:center;letter-spacing:4px"
+            oninput="gpsSearchTruck(this.value)"
+            onfocus="document.getElementById('gps-truck-dropdown').style.display='block'"
+          >
+          <div id="gps-truck-dropdown" style="display:none;position:absolute;top:100%;right:0;left:0;background:#111827;border:1px solid rgba(255,140,0,.3);border-radius:10px;margin-top:4px;max-height:260px;overflow-y:auto;z-index:500;box-shadow:0 8px 24px rgba(0,0,0,.5)">
+            <div id="gps-truck-list"></div>
+          </div>
         </div>
+        <div id="gps-selected-truck-display" style="display:none;margin-top:10px;background:rgba(0,212,170,.08);border:1px solid rgba(0,212,170,.3);border-radius:10px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:12px;color:#8a9ab8;margin-bottom:2px">تم اختيار</div>
+            <div id="gps-selected-truck-label" style="font-size:16px;font-weight:800;color:#00d4aa"></div>
+          </div>
+          <button onclick="gpsResetTruckSel()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:5px 10px;color:#8a9ab8;font-size:12px;cursor:pointer">تغيير</button>
+        </div>
+        <!-- hidden select للتوافق مع باقي الكود -->
+        <select id="gps-truck-sel" style="display:none" onchange="gpsTruckChanged()"></select>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
         <div id="gps-cons-field">
           <label style="display:block;font-size:11px;color:#8a9ab8;margin-bottom:5px">معدل الاستهلاك (كم/لتر)</label>
           <input id="gps-cons-inp" type="number" min="0.1" step="0.1" class="fsel" style="width:110px" oninput="gpsRenderLive()">
@@ -515,8 +536,8 @@ body::before {
           <label style="display:block;font-size:11px;color:#8a9ab8;margin-bottom:5px">سعر اللتر (ج.م)</label>
           <input id="gps-price-inp" type="number" min="0" step="0.01" class="fsel" style="width:110px" oninput="gpsRenderLive()">
         </div>
-        <button id="gps-start-btn" class="tb tb-t" onclick="startGpsTrip()">▶️ ابدأ الرحلة</button>
-        <button id="gps-stop-btn" class="tb tb-r hidden" onclick="stopGpsTrip()">⏹️ إنهاء الرحلة</button>
+        <button id="gps-start-btn" class="tb tb-t" onclick="startGpsTrip()" style="padding:14px 32px;font-size:16px;font-weight:800;border-radius:12px;width:100%;margin-top:8px">▶️ ابدأ الرحلة</button>
+        <button id="gps-stop-btn" class="tb tb-r hidden" onclick="stopGpsTrip()" style="padding:14px 32px;font-size:16px;font-weight:800;border-radius:12px;width:100%;margin-top:8px;animation:pulse 1.5s infinite">⏹️ إنهاء الرحلة وحفظها</button>
       </div>
       <div id="gps-error" class="lerr" style="margin-top:12px"></div>
     </div>
@@ -550,10 +571,30 @@ body::before {
 <div class="fp hidden" id="mappage">
   <div class="fpt">
     <div class="fptitle">🗺️ خريطة مباشرة — كل العربيات</div>
-    <div style="display:flex;gap:10px;align-items:center">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <span id="map-refresh-status" style="font-size:11px;color:#8a9ab8"></span>
+      <span id="map-countdown" style="font-size:11px;color:#4a5670"></span>
+      <button class="tb" style="background:rgba(0,212,170,.12);border:1px solid rgba(0,212,170,.4);color:#00d4aa;padding:5px 12px" onclick="showDriverLinkPanel()">🔗 لينك السواق</button>
       <button class="tb" style="background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.4);color:#a78bfa;padding:5px 12px" onclick="refreshManagerMap()">🔄 تحديث</button>
       <button class="tb" style="background:transparent;border:1px solid rgba(255,255,255,.1);color:#8a9ab8;border-radius:7px;padding:6px 14px" onclick="closePage('mappage')">✕</button>
+    </div>
+  </div>
+  <!-- بانيل لينك السواق -->
+  <div id="driver-link-panel" style="display:none;background:#111827;border-bottom:1px solid rgba(0,212,170,.2);padding:14px 18px">
+    <div style="font-size:13px;font-weight:700;color:#00d4aa;margin-bottom:10px">🔗 إنشاء لينك للسواق</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+      <div>
+        <label style="font-size:11px;color:#8a9ab8;display:block;margin-bottom:4px">اختار العربية</label>
+        <select id="link-truck-sel" class="fsel" style="min-width:180px" onchange="generateDriverLink()"></select>
+      </div>
+      <div style="flex:1;min-width:240px">
+        <label style="font-size:11px;color:#8a9ab8;display:block;margin-bottom:4px">لينك السواق (ابعته على موبايله)</label>
+        <div style="display:flex;gap:6px">
+          <input id="driver-link-out" readonly style="flex:1;background:#0d1422;border:1px solid rgba(0,212,170,.3);border-radius:6px;padding:7px 10px;color:#00d4aa;font-size:12px;font-family:monospace;outline:none;direction:ltr" value="">
+          <button class="tb" style="background:rgba(0,212,170,.15);border:1px solid rgba(0,212,170,.4);color:#00d4aa;padding:6px 14px;white-space:nowrap" onclick="copyDriverLink()">📋 نسخ</button>
+          <button class="tb" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#8a9ab8;padding:6px 10px" onclick="document.getElementById('driver-link-panel').style.display='none'">✕</button>
+        </div>
+      </div>
     </div>
   </div>
   <div class="fpb" style="max-width:100%;padding:12px 16px;display:flex;flex-direction:column;gap:16px">
@@ -3276,7 +3317,7 @@ function renderCostAnalysis(){
   function openManagerMap(){
     document.getElementById('mappage').classList.remove('hidden');
     setTimeout(function(){refreshManagerMap();},100);
-    _mapRefreshTimer=setInterval(refreshManagerMap,30000);
+    _mapRefreshTimer=setInterval(refreshManagerMap,10000);
   }
 
 
@@ -3316,7 +3357,12 @@ function renderCostAnalysis(){
       var iconHtml='<div style="background:'+color+';width:40px;height:40px;border-radius:50%;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,.5)'+(isSpeeding?';animation:pulse-icon 0.5s infinite alternate':'')+' ">'+icon_emoji+'</div>';
       var icon=L.divIcon({html:iconHtml,className:'',iconSize:[40,40],iconAnchor:[20,20]});
       var violLine=violRecent?('<br><span style="color:#ff4444;font-weight:700">🚨 تجاوز السرعة! '+viol.speed+' كم/س (الحد: '+viol.limit+')</span>'):'';
-      var popupText='<div dir="rtl" style="font-family:inherit;min-width:180px"><strong style="color:#22d3ee">'+escHtml(p.truck||key)+'</strong><br>'+escHtml(p.truckType||'')+'<br>سرعة: <strong style="color:'+(isSpeeding?'#ff4444':'#ffd700')+'">'+Math.round(p.speed||0)+' كم/س</strong><br>مسافة: <strong>'+(p.distanceKm||0).toFixed(2)+' كم</strong>'+violLine+'<br><span style="color:'+(isActive?'#00d4aa':'#8a9ab8')+'">● '+(isActive?'نشط':'آخر ظهور: '+new Date(p.ts).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}))+'</span></div>';
+      var fd=(typeof FUEL_DATA!=='undefined')?FUEL_DATA.find(function(x){return x.T===(p.truck||key);}):null;
+      var cons=fd?fd.cons:9;
+      var fp=(typeof fuelPrice!=='undefined'&&fuelPrice>0)?fuelPrice:21.5;
+      var liveCost=p.liveCost!=null?p.liveCost:(cons>0?((p.distanceKm||0)/cons*fp):0);
+      var costLine=isActive&&(p.distanceKm||0)>0?('<br>⛽ تكلفة الرحلة حتى الآن: <strong style="color:#00d4aa">'+liveCost.toFixed(2)+' ج.م</strong>'):'';
+      var popupText='<div dir="rtl" style="font-family:inherit;min-width:180px"><strong style="color:#22d3ee">'+escHtml(p.truck||key)+'</strong><br>'+escHtml(p.truckType||'')+'<br>سرعة: <strong style="color:'+(isSpeeding?'#ff4444':'#ffd700')+'">'+Math.round(p.speed||0)+' كم/س</strong><br>مسافة: <strong>'+(p.distanceKm||0).toFixed(2)+' كم</strong>'+costLine+violLine+'<br><span style="color:'+(isActive?'#00d4aa':'#8a9ab8')+'">● '+(isActive?'🟢 نشط الآن':'⚫ آخر ظهور: '+new Date(p.ts).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}))+'</span></div>';
       if(_mapMarkers[key]){_mapMarkers[key].setLatLng([p.lat,p.lng]).setIcon(icon).getPopup().setContent(popupText);}
       else{_mapMarkers[key]=L.marker([p.lat,p.lng],{icon:icon}).addTo(_managerMap).bindPopup(popupText);}
       bounds.push([p.lat,p.lng]);
@@ -3324,11 +3370,23 @@ function renderCostAnalysis(){
       if(isSpeeding||violRecent)speedingCount++;
     });
     if(bounds.length)try{_managerMap.fitBounds(bounds,{padding:[30,30],maxZoom:14});}catch(_e){}
+    // احسب إجمالي التكاليف Live لكل العربيات النشطة
+    var totalLiveCost=0, totalLiveKm=0;
+    Object.keys(positions).forEach(function(key){
+      var p=positions[key];if(!p)return;
+      var isAct=p.active&&(Date.now()-p.ts<300000);
+      if(isAct){
+        totalLiveKm+=(p.distanceKm||0);
+        totalLiveCost+=(p.liveCost||0);
+      }
+    });
     var kpiEl=document.getElementById('map-summary-kpis');
     if(kpiEl)kpiEl.innerHTML=
       '<div class="kpi"><div class="kv" style="color:#00d4aa">'+activeCount+'</div><div class="kl">عربيات نشطة الآن</div></div>'+
       '<div class="kpi"><div class="kv" style="color:#8a9ab8">'+Object.keys(positions).length+'</div><div class="kl">إجمالي المتتبعة</div></div>'+
-      (speedingCount?'<div class="kpi"><div class="kv" style="color:#ff4444;animation:pulse-icon 0.6s infinite alternate">🚨 '+speedingCount+'</div><div class="kl">تجاوز السرعة الآن</div></div>':'');
+      (totalLiveKm>0?'<div class="kpi"><div class="kv" style="color:#22d3ee">'+totalLiveKm.toFixed(1)+' كم</div><div class="kl">مسافة الرحلات الحالية</div></div>':'')+
+      (totalLiveCost>0?'<div class="kpi" style="border:1px solid rgba(0,212,170,.3)"><div class="kv" style="color:#00d4aa">'+totalLiveCost.toFixed(2)+' ج.م</div><div class="kl">⛽ تكلفة وقود الآن</div></div>':'')+
+      (speedingCount?'<div class="kpi" style="border:1px solid rgba(255,68,68,.4)"><div class="kv" style="color:#ff4444;animation:pulse-icon 0.6s infinite alternate">🚨 '+speedingCount+'</div><div class="kl">تجاوز السرعة الآن</div></div>':'');
   }
 
   function renderFirebaseTrips(tripsObj){
@@ -3351,6 +3409,69 @@ function renderCostAnalysis(){
         '<td style="color:#00d4aa;font-weight:700">'+((t.cost||0).toLocaleString(undefined,{maximumFractionDigits:2}))+' ج.م</td></tr>';
     }).join('')||'<tr><td colspan="8" style="text-align:center;color:#4a5670;padding:20px">لسه مفيش رحلات من السواقين</td></tr>';
   }
+  // ==================== DRIVER LINK PANEL ====================
+  var _mapCountdownVal=10;
+  var _mapCountdownTimer=null;
+
+  function startMapCountdown(){
+    if(_mapCountdownTimer)clearInterval(_mapCountdownTimer);
+    _mapCountdownVal=10;
+    _mapCountdownTimer=setInterval(function(){
+      _mapCountdownVal--;
+      var el=document.getElementById('map-countdown');
+      if(el)el.textContent='(تحديث تلقائي بعد '+_mapCountdownVal+'ث)';
+      if(_mapCountdownVal<=0){_mapCountdownVal=10;}
+    },1000);
+  }
+
+  // نعمل override لـ refreshManagerMap عشان نضيف العداد
+  var _origRefreshManagerMap=refreshManagerMap;
+  refreshManagerMap=function(){
+    _mapCountdownVal=10;
+    _origRefreshManagerMap();
+  };
+
+  var _origOpenManagerMap=openManagerMap;
+  openManagerMap=function(){
+    _origOpenManagerMap();
+    startMapCountdown();
+    populateLinkTrucks();
+  };
+
+  function showDriverLinkPanel(){
+    var panel=document.getElementById('driver-link-panel');
+    if(!panel)return;
+    panel.style.display=panel.style.display==='none'?'block':'none';
+    if(panel.style.display==='block'){populateLinkTrucks();generateDriverLink();}
+  }
+
+  function populateLinkTrucks(){
+    var sel=document.getElementById('link-truck-sel');if(!sel)return;
+    var list=(typeof FUEL_DATA!=='undefined'&&FUEL_DATA.length)?FUEL_DATA.slice():[];
+    list.sort(function(a,b){return String(a.T).localeCompare(String(b.T),undefined,{numeric:true});});
+    sel.innerHTML=list.map(function(t){return '<option value="'+escHtml(String(t.T))+'">🚚 '+escHtml(String(t.T))+' — '+escHtml(String(t.TT||''))+'</option>';}).join('');
+  }
+
+  function generateDriverLink(){
+    var sel=document.getElementById('link-truck-sel');
+    var out=document.getElementById('driver-link-out');
+    if(!sel||!out)return;
+    var base=window.location.origin+window.location.pathname;
+    var link=base+'?driver=1&truck='+encodeURIComponent(sel.value);
+    out.value=link;
+  }
+
+  function copyDriverLink(){
+    var out=document.getElementById('driver-link-out');
+    if(!out)return;
+    navigator.clipboard.writeText(out.value).then(function(){
+      toast('✅ تم نسخ لينك السواق!');
+    }).catch(function(){
+      out.select();document.execCommand('copy');
+      toast('✅ تم نسخ اللينك!');
+    });
+  }
+  // ==================== END DRIVER LINK PANEL ====================
   // ==================== END MANAGER MAP ====================
 
   function loadAllSavedData(){
@@ -3361,6 +3482,57 @@ function renderCostAnalysis(){
     try{var _ml=localStorage.getItem('fleet_curMonthLabel');if(_ml){var _mi=document.getElementById('cur-month-label');if(_mi)_mi.value=_ml;}}catch(_e){}
     try{var _mt=localStorage.getItem('fleet_mtTypes');if(_mt){var _mto=JSON.parse(_mt);Object.keys(_mto).forEach(function(k){MT_TYPES[k]=_mto[k];});}}catch(_e){}
   }
+
+  // =================== TRUCK SEARCH UI ===================
+  function gpsRenderTruckList(filter){
+    var list=(typeof FUEL_DATA!=='undefined'&&FUEL_DATA.length)?FUEL_DATA.slice():[];
+    list.sort(function(a,b){return String(a.T).localeCompare(String(b.T),undefined,{numeric:true});});
+    if(filter&&filter.trim()){
+      var f=filter.trim().toLowerCase();
+      list=list.filter(function(t){return String(t.T).toLowerCase().includes(f)||String(t.TT||'').toLowerCase().includes(f);});
+    }
+    var container=document.getElementById('gps-truck-list');if(!container)return;
+    if(!list.length){container.innerHTML='<div style="padding:16px;text-align:center;color:#4a5670;font-size:13px">مفيش عربية بالرقم ده</div>';return;}
+    container.innerHTML=list.map(function(t){
+      return '<div onclick="gpsSelectTruck(\''+escHtml(String(t.T))+'\',\''+escHtml(String(t.TT||''))+'\')" style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer;display:flex;align-items:center;gap:12px" onmouseover="this.style.background=\'rgba(255,140,0,.08)\'" onmouseout="this.style.background=\'transparent\'">'
+        +'<div style="background:rgba(255,140,0,.12);border:1px solid rgba(255,140,0,.3);border-radius:8px;width:52px;height:44px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#ffad33;flex-shrink:0">'+escHtml(String(t.T))+'</div>'
+        +'<div><div style="font-size:14px;font-weight:700;color:#e8edf5">عربية '+escHtml(String(t.T))+'</div><div style="font-size:12px;color:#8a9ab8;margin-top:1px">'+escHtml(String(t.TT||''))+(t.cons?' — '+t.cons+' كم/لتر':'')+'</div></div>'
+        +'</div>';
+    }).join('');
+  }
+
+  function gpsSearchTruck(val){
+    document.getElementById('gps-truck-dropdown').style.display='block';
+    gpsRenderTruckList(val);
+  }
+
+  function gpsSelectTruck(truckNum, truckType){
+    var sel=document.getElementById('gps-truck-sel');
+    if(sel){sel.value=truckNum;gpsTruckChanged();}
+    var searchInp=document.getElementById('gps-truck-search');
+    if(searchInp){searchInp.value=truckNum;searchInp.style.display='none';}
+    var display=document.getElementById('gps-selected-truck-display');
+    var label=document.getElementById('gps-selected-truck-label');
+    if(display)display.style.display='flex';
+    if(label)label.textContent='🚚 عربية '+truckNum+' — '+truckType;
+    document.getElementById('gps-truck-dropdown').style.display='none';
+  }
+
+  function gpsResetTruckSel(){
+    var display=document.getElementById('gps-selected-truck-display');
+    var searchInp=document.getElementById('gps-truck-search');
+    if(display)display.style.display='none';
+    if(searchInp){searchInp.style.display='block';searchInp.value='';searchInp.focus();}
+    gpsRenderTruckList('');
+    document.getElementById('gps-truck-dropdown').style.display='block';
+  }
+
+  document.addEventListener('click',function(e){
+    var dd=document.getElementById('gps-truck-dropdown');
+    var inp=document.getElementById('gps-truck-search');
+    if(dd&&inp&&!dd.contains(e.target)&&e.target!==inp)dd.style.display='none';
+  });
+  // =================== END TRUCK SEARCH UI ===================
 
   // ===================== GPS LIVE TRACKING =====================
   var GPS_TRIPS=[]; // {id,truck,truckType,date,startLabel,endLabel,distanceKm,cons,fuelPrice,cost}
@@ -3374,7 +3546,9 @@ function renderCostAnalysis(){
     var sel=document.getElementById('gps-truck-sel');if(!sel)return;
     var list=(typeof FUEL_DATA!=='undefined'&&FUEL_DATA.length)?FUEL_DATA.slice():[];
     list.sort(function(a,b){return String(a.T).localeCompare(String(b.T),undefined,{numeric:true});});
-    sel.innerHTML=list.map(function(t){return '<option value="'+escHtml(String(t.T))+'" data-tt="'+escHtml(String(t.TT))+'" data-cons="'+(t.cons||9)+'">🚚 '+escHtml(String(t.T))+' — '+escHtml(String(t.TT))+'</option>';}).join('');
+    sel.innerHTML=list.map(function(t){return '<option value="'+escHtml(String(t.T))+'" data-tt="'+escHtml(String(t.TT))+'" data-cons="'+(t.cons||9)+'">'+escHtml(String(t.T))+' — '+escHtml(String(t.TT))+'</option>';}).join('');
+    // ملي القايمة البصرية للسواق
+    gpsRenderTruckList('');
     gpsTruckChanged();
   }
   function gpsTruckChanged(){
@@ -3493,7 +3667,8 @@ function renderCostAnalysis(){
     if(now-_gpsLastFBPush>15000&&gpsState.truck){
       _gpsLastFBPush=now;
       var truckKey=gpsState.truck.replace(/[^a-zA-Z0-9_]/g,'_');
-      fetch(FB_URL+'/gps_positions/'+truckKey+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({lat:lat,lng:lng,speed:Math.round(gpsState.lastSpeed||0),truck:gpsState.truck,truckType:gpsState.truckType||'',distanceKm:+gpsState.distanceKm.toFixed(2),ts:now,active:true,speeding:DRIVER_MODE&&gpsState.lastSpeed>(DRIVER_MAXSPEED||80)})}).catch(function(){});
+      var _liveCost=gpsState.cons>0?(gpsState.distanceKm/gpsState.cons*gpsState.price):0;
+      fetch(FB_URL+'/gps_positions/'+truckKey+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({lat:lat,lng:lng,speed:Math.round(gpsState.lastSpeed||0),truck:gpsState.truck,truckType:gpsState.truckType||'',distanceKm:+gpsState.distanceKm.toFixed(2),liveCost:+_liveCost.toFixed(2),cons:gpsState.cons||0,fuelPrice:gpsState.price||0,ts:now,active:true,speeding:DRIVER_MODE&&gpsState.lastSpeed>(DRIVER_MAXSPEED||80)})}).catch(function(){});
     }
     gpsRenderLive();
   }
@@ -3615,8 +3790,19 @@ function renderCostAnalysis(){
       if(DRIVER_TRUCK){
         var _sel=document.getElementById('gps-truck-sel');
         if(_sel){_sel.value=DRIVER_TRUCK;_sel.disabled=true;gpsTruckChanged();}
+        // اعرض الاختيار في الواجهة الجديدة وأخفي خانة البحث
+        var _fd=(typeof FUEL_DATA!=='undefined')?FUEL_DATA.find(function(x){return x.T===DRIVER_TRUCK;}):null;
+        var _tt=_fd?(_fd.TT||''):'';
+        gpsSelectTruck(DRIVER_TRUCK,_tt);
+        var _searchInp=document.getElementById('gps-truck-search');
+        if(_searchInp){_searchInp.style.display='none';_searchInp.disabled=true;}
+        var _resetBtn=document.querySelector('#gps-selected-truck-display button');
+        if(_resetBtn)_resetBtn.style.display='none';
       } else {
-        gpsTruckChanged();
+        // في وضع السواق بدون تحديد عربية — افتح القايمة تلقائياً
+        gpsRenderTruckList('');
+        var _dd=document.getElementById('gps-truck-dropdown');
+        if(_dd)_dd.style.display='block';
       }
     }catch(_e){}
   }
