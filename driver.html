@@ -233,7 +233,10 @@ function stopTrip(){
   fetch(FB+'/gps_positions/'+tk+'/active.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:'false'}).catch(function(){});
   if(state.dist>0.01){
     var now=new Date();
-    var trip={id:'t'+Date.now(),truck:state.truck,truckType:state.tt||'',date:now.toLocaleDateString('ar-EG'),start:new Date(state.startTime).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}),end:now.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}),distanceKm:+state.dist.toFixed(2),cons:state.cons,ts:Date.now()};
+    var _fp=13.75;var _cost=state.cons>0?+((state.dist/state.cons)*_fp).toFixed(2):0;
+    var _startLabel=new Date(state.startTime).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
+    var _endLabel=now.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
+    var trip={id:'t'+Date.now(),truck:state.truck,truckType:state.tt||'',date:now.toLocaleDateString('ar-EG'),startLabel:_startLabel,endLabel:_endLabel,start:_startLabel,end:_endLabel,distanceKm:+state.dist.toFixed(2),cons:state.cons,fuelPrice:_fp,cost:_cost,ts:Date.now()};
     trips.unshift(trip);
     try{localStorage.setItem('drv_trips',JSON.stringify(trips.slice(0,50)));}catch(e){}
     fetch(FB+'/gps_trips.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(trip)}).catch(function(){});
