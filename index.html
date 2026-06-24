@@ -530,6 +530,33 @@ body::before {
       <div id="gps-error" class="lerr" style="margin-top:12px"></div>
     </div>
 
+    <!-- بعت رسالة / تعديل سرعة -->
+    <div class="card" style="margin-bottom:16px;border:1px solid rgba(251,191,36,.25)">
+      <div class="ct" style="color:#fbbf24">📨 تواصل مع السواق</div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+        <div>
+          <label style="display:block;font-size:11px;color:#8a9ab8;margin-bottom:5px">اختر العربية</label>
+          <select id="cmd-truck-sel" class="fsel" style="min-width:180px"></select>
+        </div>
+        <div style="flex:1;min-width:220px">
+          <label style="display:block;font-size:11px;color:#8a9ab8;margin-bottom:5px">📢 رسالة للسواق</label>
+          <div style="display:flex;gap:6px">
+            <input id="cmd-msg-inp" type="text" placeholder="مثال: خليك في الطريق الرئيسي..." class="fsel" style="flex:1">
+            <button class="tb" onclick="sendDriverMessage()" style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);color:#fbbf24;flex-shrink:0">إرسال</button>
+            <button class="tb" onclick="clearDriverMessage()" style="background:rgba(255,68,68,.1);border:1px solid rgba(255,68,68,.3);color:#ff6b6b;flex-shrink:0">مسح</button>
+          </div>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:#8a9ab8;margin-bottom:5px">⚡ حد السرعة (كم/س)</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="cmd-speed-inp" type="number" min="20" max="200" step="5" value="80" class="fsel" style="width:90px">
+            <button class="tb" onclick="sendSpeedLimit()" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#f87171;flex-shrink:0">تحديث</button>
+          </div>
+        </div>
+      </div>
+      <div id="cmd-status" style="display:none;margin-top:10px;font-size:12px;padding:8px 12px;border-radius:8px"></div>
+    </div>
+
     <div id="gps-live-card" class="card hidden" style="margin-bottom:16px;border:1px solid rgba(0,212,170,.35);background:rgba(0,212,170,.04)">
       <div class="ct" style="color:#00d4aa">
         <span><span class="dot" style="background:#00d4aa"></span> الرحلة شغالة الآن — <span id="gps-live-truck"></span></span>
@@ -3426,6 +3453,49 @@ function renderCostAnalysis(){
 
   function gpsSaveTrips(){try{localStorage.setItem('fleet_gpsTrips',JSON.stringify(GPS_TRIPS));}catch(_e){}}
 
+  // =================== DRIVER COMMANDS ===================
+  function cmdTruckKey(){
+    var sel=document.getElementById('cmd-truck-sel');
+    return sel&&sel.value?sel.value.replace(/[^a-zA-Z0-9_]/g,'_'):'';
+  }
+  function cmdStatus(msg,ok){
+    var el=document.getElementById('cmd-status');
+    el.style.display='block';
+    el.style.background=ok?'rgba(0,212,170,.1)':'rgba(255,68,68,.1)';
+    el.style.border='1px solid '+(ok?'rgba(0,212,170,.3)':'rgba(255,68,68,.3)');
+    el.style.color=ok?'#00d4aa':'#ff6b6b';
+    el.textContent=msg;
+    setTimeout(function(){el.style.display='none';},4000);
+  }
+  function sendDriverMessage(){
+    var tk=cmdTruckKey();if(!tk){cmdStatus('⚠️ اختار العربية الأول',false);return;}
+    var msg=document.getElementById('cmd-msg-inp').value.trim();if(!msg){cmdStatus('⚠️ اكتب رسالة الأول',false);return;}
+    fetch(FB_URL+'/driver_commands/'+tk+'/message.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:msg,ts:Date.now(),read:false})})
+      .then(function(){cmdStatus('✅ الرسالة اتبعتت للسواق!',true);document.getElementById('cmd-msg-inp').value='';})
+      .catch(function(){cmdStatus('❌ فيه خطأ في الإرسال',false);});
+  }
+  function clearDriverMessage(){
+    var tk=cmdTruckKey();if(!tk){cmdStatus('⚠️ اختار العربية الأول',false);return;}
+    fetch(FB_URL+'/driver_commands/'+tk+'/message.json',{method:'DELETE'})
+      .then(function(){cmdStatus('✅ الرسالة اتمسحت',true);document.getElementById('cmd-msg-inp').value='';})
+      .catch(function(){cmdStatus('❌ خطأ في المسح',false);});
+  }
+  function sendSpeedLimit(){
+    var tk=cmdTruckKey();if(!tk){cmdStatus('⚠️ اختار العربية الأول',false);return;}
+    var spd=parseInt(document.getElementById('cmd-speed-inp').value);
+    if(!spd||spd<20||spd>200){cmdStatus('⚠️ ادخل سرعة بين 20 و 200',false);return;}
+    fetch(FB_URL+'/driver_commands/'+tk+'/maxSpeed.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(spd)})
+      .then(function(){cmdStatus('✅ حد السرعة اتبعت ('+spd+' كم/س)',true);})
+      .catch(function(){cmdStatus('❌ خطأ في الإرسال',false);});
+  }
+  function populateCmdTruckSel(){
+    var src=document.getElementById('gps-truck-sel');
+    var dst=document.getElementById('cmd-truck-sel');
+    if(!src||!dst)return;
+    dst.innerHTML=src.innerHTML;
+  }
+  // =================== END DRIVER COMMANDS ===================
+
   // =================== GITHUB UPLOAD ===================
   function openGithubModal(){
     var m=document.getElementById('github-modal');
@@ -3508,6 +3578,7 @@ function renderCostAnalysis(){
     list.sort(function(a,b){return String(a.T).localeCompare(String(b.T),undefined,{numeric:true});});
     sel.innerHTML=list.map(function(t){return '<option value="'+escHtml(String(t.T))+'" data-tt="'+escHtml(String(t.TT))+'" data-cons="'+(t.cons||9)+'">🚚 '+escHtml(String(t.T))+' — '+escHtml(String(t.TT))+'</option>';}).join('');
     gpsTruckChanged();
+    populateCmdTruckSel();
   }
   function gpsTruckChanged(){
     var sel=document.getElementById('gps-truck-sel');if(!sel||!sel.options.length)return;
