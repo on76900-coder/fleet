@@ -241,6 +241,7 @@ body::before {
   <button class="tb tb-t" onclick="shareRO()">📤 مشاركة</button>
   <button class="tb ro-hide" style="background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.5);color:#ffd700;font-weight:800" onclick="endMonth()">🏁 إنهاء الشهر</button>
   <button id="main-save-btn" class="tb ro-hide" onclick="saveAllData()" style="background:rgba(0,212,170,.25);border:2px solid rgba(0,212,170,.8);color:#00d4aa;font-weight:900;font-size:13px;padding:7px 20px;border-radius:8px;box-shadow:0 0 12px rgba(0,212,170,.35)">💾 حفظ</button>
+  <button class="tb ro-hide" onclick="openGithubModal()" style="background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.4);color:#a78bfa">⬆️ GitHub</button>
   <div class="live" id="mbadge"><div class="dot"></div><input id="cur-month-label" type="text" value="MAY 2026" title="اكتب اسم الشهر" style="background:transparent;border:none;border-bottom:1.5px solid rgba(0,212,170,.5);outline:none;color:#00d4aa;font-size:12px;font-weight:700;width:105px;letter-spacing:.5px;cursor:text;padding-bottom:1px" oninput="saveMonthLabel()"/></div>
   <div id="user-badge" onclick="openUmgr()"><span id="ub-name">—</span> 👤</div>
 </div>
@@ -513,10 +514,18 @@ body::before {
         </div>
         <div id="gps-price-field">
           <label style="display:block;font-size:11px;color:#8a9ab8;margin-bottom:5px">سعر اللتر (ج.م)</label>
-          <input id="gps-price-inp" type="number" min="0" step="0.01" class="fsel" style="width:110px" oninput="gpsRenderLive()">
+          <input id="gps-price-inp" type="number" min="0" step="0.01" value="13.75" class="fsel" style="width:110px" oninput="gpsRenderLive()">
         </div>
         <button id="gps-start-btn" class="tb tb-t" onclick="startGpsTrip()">▶️ ابدأ الرحلة</button>
         <button id="gps-stop-btn" class="tb tb-r hidden" onclick="stopGpsTrip()">⏹️ إنهاء الرحلة</button>
+        <button class="tb" style="background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.4);color:#ffd700" onclick="copyDriverLink()">📋 نسخ لينك السواق</button>
+      </div>
+      <div id="driver-link-box" style="display:none;margin-top:12px;background:#0d1422;border:1px solid rgba(255,215,0,.3);border-radius:8px;padding:10px 14px;display:none">
+        <div style="font-size:11px;color:#8a9ab8;margin-bottom:6px">ابعت الرابط ده للسواق — العربية هتبقى محددة ومش يقدر يغيرها:</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="driver-link-input" type="text" readonly style="flex:1;background:#080c14;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:7px 10px;color:#ffd700;font-size:12px;font-family:monospace;outline:none;direction:ltr">
+          <button class="tb" style="background:rgba(0,212,170,.15);border:1px solid rgba(0,212,170,.4);color:#00d4aa;flex-shrink:0" onclick="copyLinkToClipboard()">📋 نسخ</button>
+        </div>
       </div>
       <div id="gps-error" class="lerr" style="margin-top:12px"></div>
     </div>
@@ -572,6 +581,27 @@ body::before {
   </div>
 </div>
 <div class="toast" id="toast"></div>
+
+<!-- GitHub Upload Modal -->
+<div id="github-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(8,12,20,.95);align-items:center;justify-content:center">
+  <div style="background:#111827;border:1px solid rgba(139,92,246,.4);border-radius:16px;padding:32px 28px;width:460px;max-width:94vw">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:32px;margin-bottom:8px">⬆️</div>
+      <div style="font-size:18px;font-weight:700;color:#a78bfa">رفع الملفات على GitHub</div>
+      <div style="font-size:12px;color:#4a5670;margin-top:4px">الريبو: on76900-coder/fleet</div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:12px;color:#8a9ab8;margin-bottom:6px">GitHub Token</label>
+      <input id="gh-token-inp" type="password" placeholder="ghp_..." style="width:100%;background:#0d1422;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 12px;color:#e8edf5;font-size:14px;font-family:monospace;outline:none;direction:ltr" oninput="this.style.borderColor='rgba(139,92,246,.5)'">
+      <div style="font-size:11px;color:#4a5670;margin-top:5px">⚠️ التوكن بيتحذف من الذاكرة بعد الرفع مباشرةً — مش بيتحفظ</div>
+    </div>
+    <div id="gh-status" style="display:none;font-size:13px;padding:10px;border-radius:8px;margin-bottom:14px;text-align:center"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="pushToGithub()" id="gh-push-btn" style="flex:1;background:linear-gradient(135deg,#7c3aed,#a78bfa);border:none;border-radius:9px;padding:12px;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">🚀 رفع الملفات</button>
+      <button onclick="closeGithubModal()" style="background:transparent;border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:12px 18px;color:#8a9ab8;font-family:inherit;cursor:pointer">إغلاق</button>
+    </div>
+  </div>
+</div>
 <script>
 // ===================== DRIVER-ONLY LINK MODE =====================
 // Open with ?driver=1  -> skips login, hides all company data, shows ONLY the GPS tracker.
@@ -609,7 +639,7 @@ var _FUEL_RAW=[{"t":"1724","dr":"محمد حسنين زكي","dt":"2026-05-29","
 var FUEL_STATIONS=_FUEL_RAW.map(function(r){return {truck:r.t,rawTruck:r.t,date:r.dt,station:r.st,company:r.co,liters:r.l,cost:r.c,driver:r.dr};});
 // Auto-init fuelInputs from embedded fuel data
 (function(){var s={};_FUEL_RAW.forEach(function(r){s[r.t]=(s[r.t]||0)+r.l;});Object.keys(s).forEach(function(t){fuelInputs[t]=s[t].toFixed(1);});})();
-var fuelPrice=0;// price per liter (EGP)
+var fuelPrice=13.75;// price per liter (EGP) — default 13.75
 var READONLY=false;
 function syncFuelInputsFromUI(){
   document.querySelectorAll('input.finp').forEach(function(inp){
@@ -3332,7 +3362,7 @@ function renderCostAnalysis(){
       var icon_emoji=isSpeeding||violRecent?'🚨':'🚚';
       var iconHtml='<div style="background:'+color+';width:40px;height:40px;border-radius:50%;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,.5)'+(isSpeeding?';animation:pulse-icon 0.5s infinite alternate':'')+' ">'+icon_emoji+'</div>';
       var icon=L.divIcon({html:iconHtml,className:'',iconSize:[40,40],iconAnchor:[20,20]});
-      var liveCost=p.cons>0&&p.distanceKm>0?((p.distanceKm/p.cons)*(fuelPrice||0)):0;
+      var _fp=fuelPrice||13.75;var liveCost=p.cons>0&&p.distanceKm>0?((p.distanceKm/p.cons)*_fp):0;
       var violLine=violRecent?('<br><span style="color:#ff4444;font-weight:700">🚨 تجاوز السرعة! '+viol.speed+' كم/س (الحد: '+viol.limit+')</span>'):'';
       var activeLabel=isActive?'نشط الآن':'آخر ظهور: '+new Date(p.ts).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
       var activeColor=isActive?'#00d4aa':'#8a9ab8';
@@ -3364,13 +3394,17 @@ function renderCostAnalysis(){
     if(kpiEl)kpiEl.innerHTML+='<div class="kpi"><div class="kv" style="color:#22d3ee">'+totalDist.toLocaleString(undefined,{maximumFractionDigits:1})+' كم</div><div class="kl">إجمالي المسافة (GPS)</div></div>'+
       '<div class="kpi"><div class="kv" style="color:#ffd700">'+totalCost.toLocaleString(undefined,{maximumFractionDigits:2})+' ج.م</div><div class="kl">إجمالي تكلفة الوقود</div></div>';
     body.innerHTML=trips.map(function(t){
+      var sl=t.startLabel||t.start||'—';
+      var el=t.endLabel||t.end||'—';
+      var fp=t.fuelPrice||13.75;
+      var cost=t.cost||(t.cons>0&&t.distanceKm>0?(t.distanceKm/t.cons)*fp:0);
       return '<tr><td><strong>'+escHtml(t.truck||'')+'</strong><br><span style="color:#8a9ab8;font-size:10px">'+escHtml(t.truckType||'')+'</span></td>'+
         '<td style="color:#8a9ab8;font-size:11px">'+escHtml(t.date||'')+'</td>'+
-        '<td style="color:#8a9ab8;font-size:11px">'+escHtml(t.startLabel||'')+' ← '+escHtml(t.endLabel||'')+'</td>'+
+        '<td style="color:#8a9ab8;font-size:11px">'+escHtml(sl)+' ← '+escHtml(el)+'</td>'+
         '<td style="color:#22d3ee;font-weight:700">'+((t.distanceKm||0).toFixed(2))+'</td>'+
         '<td>'+((t.cons||0))+' كم/لتر</td>'+
-        '<td>'+((t.fuelPrice||0))+' ج.م</td>'+
-        '<td style="color:#00d4aa;font-weight:700">'+((t.cost||0).toLocaleString(undefined,{maximumFractionDigits:2}))+' ج.م</td></tr>';
+        '<td>'+fp+' ج.م</td>'+
+        '<td style="color:#00d4aa;font-weight:700">'+cost.toLocaleString(undefined,{maximumFractionDigits:2})+' ج.م</td></tr>';
     }).join('')||'<tr><td colspan="8" style="text-align:center;color:#4a5670;padding:20px">لسه مفيش رحلات من السواقين</td></tr>';
   }
   // ==================== END MANAGER MAP ====================
@@ -3392,6 +3426,82 @@ function renderCostAnalysis(){
 
   function gpsSaveTrips(){try{localStorage.setItem('fleet_gpsTrips',JSON.stringify(GPS_TRIPS));}catch(_e){}}
 
+  // =================== GITHUB UPLOAD ===================
+  function openGithubModal(){
+    var m=document.getElementById('github-modal');
+    m.style.display='flex';
+    document.getElementById('gh-status').style.display='none';
+    document.getElementById('gh-token-inp').value='';
+    document.getElementById('gh-push-btn').disabled=false;
+    document.getElementById('gh-push-btn').textContent='🚀 رفع الملفات';
+  }
+  function closeGithubModal(){
+    document.getElementById('github-modal').style.display='none';
+    document.getElementById('gh-token-inp').value='';
+  }
+  function ghSetStatus(msg,ok){
+    var el=document.getElementById('gh-status');
+    el.style.display='block';
+    el.style.background=ok?'rgba(0,212,170,.1)':'rgba(255,68,68,.1)';
+    el.style.border='1px solid '+(ok?'rgba(0,212,170,.3)':'rgba(255,68,68,.3)');
+    el.style.color=ok?'#00d4aa':'#ff6b6b';
+    el.textContent=msg;
+  }
+  async function ghUploadFile(token,path,localUrl,label){
+    // جيب SHA الملف الحالي
+    var shaRes=await fetch('https://api.github.com/repos/on76900-coder/fleet/contents/'+path,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
+    var shaData=await shaRes.json();
+    // جيب محتوى الملف من الموقع
+    var content=await fetch(localUrl).then(function(r){return r.text();});
+    var b64=btoa(unescape(encodeURIComponent(content)));
+    var body={message:'Update '+path+' from dashboard',content:b64};
+    if(shaData.sha)body.sha=shaData.sha;
+    var res=await fetch('https://api.github.com/repos/on76900-coder/fleet/contents/'+path,{method:'PUT',headers:{'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},body:JSON.stringify(body)});
+    var data=await res.json();
+    if(!data.content)throw new Error(label+': '+(data.message||'فشل الرفع'));
+    return true;
+  }
+  async function pushToGithub(){
+    var token=document.getElementById('gh-token-inp').value.trim();
+    if(!token){ghSetStatus('⚠️ ادخل GitHub Token الأول',false);return;}
+    var btn=document.getElementById('gh-push-btn');
+    btn.disabled=true;btn.textContent='⏳ جاري الرفع...';
+    ghSetStatus('⏳ جاري رفع dashboard.html...',true);
+    try{
+      await ghUploadFile(token,'index.html',window.location.origin+'/dashboard.html','dashboard');
+      ghSetStatus('⏳ جاري رفع driver.html...',true);
+      await ghUploadFile(token,'driver.html',window.location.origin+'/driver.html','driver');
+      ghSetStatus('✅ تم رفع الملفين على GitHub بنجاح!',true);
+      btn.textContent='✅ تم!';
+      document.getElementById('gh-token-inp').value='';
+      setTimeout(closeGithubModal,2000);
+    }catch(e){
+      ghSetStatus('❌ '+e.message,false);
+      btn.disabled=false;btn.textContent='🚀 رفع الملفات';
+      document.getElementById('gh-token-inp').value='';
+    }
+  }
+  // =================== END GITHUB UPLOAD ===================
+
+  function copyDriverLink(){
+    var sel=document.getElementById('gps-truck-sel');
+    if(!sel||!sel.value){alert('اختار عربية الأول!');return;}
+    var truck=sel.value;
+    var base=window.location.origin+'/driver.html';
+    var link=base+'?truck='+encodeURIComponent(truck);
+    var box=document.getElementById('driver-link-box');
+    var inp=document.getElementById('driver-link-input');
+    inp.value=link;
+    box.style.display='block';
+    inp.select();
+    try{navigator.clipboard.writeText(link).then(function(){showToast('✅ تم نسخ اللينك!');});}catch(e){showToast('✅ اللينك جاهز — انسخه يدوياً');}
+  }
+  function copyLinkToClipboard(){
+    var inp=document.getElementById('driver-link-input');
+    if(!inp)return;
+    inp.select();
+    try{navigator.clipboard.writeText(inp.value).then(function(){showToast('✅ تم نسخ اللينك!');});}catch(e){document.execCommand('copy');showToast('✅ تم نسخ اللينك!');}
+  }
   function gpsPopulateTrucks(){
     var sel=document.getElementById('gps-truck-sel');if(!sel)return;
     var list=(typeof FUEL_DATA!=='undefined'&&FUEL_DATA.length)?FUEL_DATA.slice():[];
