@@ -6,6 +6,20 @@
 <title>Fleet Control Center — عمر ناصر</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+.leaflet-container { background: #0d1422 !important; }
+.leaflet-popup-content-wrapper { background: #1a2235; border: 1px solid rgba(255,255,255,.12); color: #e8edf5; border-radius: 10px; }
+.leaflet-popup-tip { background: #1a2235; }
+.leaflet-popup-close-button { color: #8a9ab8 !important; }
+.leaflet-control-layers { background: #1a2235 !important; border: 1px solid rgba(255,255,255,.12) !important; border-radius: 10px !important; color: #e8edf5 !important; padding: 8px 10px !important; box-shadow: 0 4px 14px rgba(0,0,0,.4) !important; }
+.leaflet-control-layers label { color: #e8edf5 !important; font-size: 12px !important; display: flex !important; align-items: center; gap: 6px; margin: 4px 0 !important; cursor: pointer; }
+.leaflet-control-layers-separator { border-top: 1px solid rgba(255,255,255,.12) !important; }
+.leaflet-control-scale-line { background: rgba(17,24,39,.75) !important; border-color: rgba(255,255,255,.3) !important; color: #e8edf5 !important; }
+.leaflet-control-zoom a { background: #1a2235 !important; color: #e8edf5 !important; border-color: rgba(255,255,255,.12) !important; }
+.leaflet-control-zoom a:hover { background: #232d45 !important; }
+</style>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 /* ===== LOGIN ===== */
@@ -530,42 +544,38 @@ body::before {
       <div id="gps-error" class="lerr" style="margin-top:12px"></div>
     </div>
 
-    <!-- بعت رسالة / تعديل سرعة -->
-    <div class="card" style="margin-bottom:16px;border:1px solid rgba(251,191,36,.25)">
-      <div class="ct" style="color:#fbbf24">📨 تواصل مع السواق</div>
-      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
-        <div>
-          <label style="display:block;font-size:11px;color:#8a9ab8;margin-bottom:5px">اختر العربية</label>
-          <select id="cmd-truck-sel" class="fsel" style="min-width:180px"></select>
-        </div>
-        <div style="flex:1;min-width:220px">
-          <label style="display:block;font-size:11px;color:#8a9ab8;margin-bottom:5px">📢 رسالة للسواق</label>
-          <div style="display:flex;gap:6px">
-            <input id="cmd-msg-inp" type="text" placeholder="مثال: خليك في الطريق الرئيسي..." class="fsel" style="flex:1">
-            <button class="tb" onclick="sendDriverMessage()" style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);color:#fbbf24;flex-shrink:0">إرسال</button>
-            <button class="tb" onclick="clearDriverMessage()" style="background:rgba(255,68,68,.1);border:1px solid rgba(255,68,68,.3);color:#ff6b6b;flex-shrink:0">مسح</button>
-          </div>
-        </div>
-        <div>
-          <label style="display:block;font-size:11px;color:#8a9ab8;margin-bottom:5px">⚡ حد السرعة (كم/س)</label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input id="cmd-speed-inp" type="number" min="20" max="200" step="5" value="80" class="fsel" style="width:90px">
-            <button class="tb" onclick="sendSpeedLimit()" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#f87171;flex-shrink:0">تحديث</button>
-          </div>
-        </div>
-      </div>
-      <div id="cmd-status" style="display:none;margin-top:10px;font-size:12px;padding:8px 12px;border-radius:8px"></div>
-    </div>
-
     <div id="gps-live-card" class="card hidden" style="margin-bottom:16px;border:1px solid rgba(0,212,170,.35);background:rgba(0,212,170,.04)">
       <div class="ct" style="color:#00d4aa">
         <span><span class="dot" style="background:#00d4aa"></span> الرحلة شغالة الآن — <span id="gps-live-truck"></span></span>
       </div>
-      <div class="kgrid" style="margin-bottom:0">
+      <div class="kgrid" style="margin-bottom:12px">
         <div class="kpi"><div class="kv" id="gps-live-distance" style="color:#22d3ee">0.00 كم</div><div class="kl">المسافة المقطوعة</div></div>
         <div class="kpi"><div class="kv" id="gps-live-duration" style="color:#8a9ab8">00:00:00</div><div class="kl">مدة الرحلة</div></div>
         <div class="kpi"><div class="kv" id="gps-live-speed" style="color:#ffd700">0 كم/س</div><div class="kl">السرعة الحالية</div></div>
-        <div class="kpi" id="gps-live-cost-box"><div class="kv" id="gps-live-cost" style="color:#00d4aa">0 ج.م</div><div class="kl">تكلفة الوقود حتى الآن</div></div>
+        <div class="kpi" id="gps-live-cost-box"><div class="kv" id="gps-live-cost" style="color:#4fb3ff">0 ج.م</div><div class="kl">⛽ تكلفة الوقود</div></div>
+      </div>
+      <div id="gps-full-cost-box" style="background:rgba(255,255,255,.04);border-radius:10px;padding:12px;display:none">
+        <div style="font-size:11px;color:#8a9ab8;font-weight:700;margin-bottom:8px;letter-spacing:1px">💰 إجمالي تكلفة الرحلة</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px">
+          <div style="background:#0d1422;border-radius:7px;padding:8px;text-align:center">
+            <div id="gps-cost-fuel" style="font-size:14px;font-weight:700;color:#4fb3ff">0</div>
+            <div style="font-size:9px;color:#8a9ab8;margin-top:2px">⛽ وقود</div>
+          </div>
+          <div style="background:#0d1422;border-radius:7px;padding:8px;text-align:center">
+            <div id="gps-cost-maint" style="font-size:14px;font-weight:700;color:#c084fc">0</div>
+            <div style="font-size:9px;color:#8a9ab8;margin-top:2px">🔧 صيانة</div>
+          </div>
+        </div>
+        <div style="background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.3);border-radius:8px;padding:8px;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:10px;color:#8a9ab8">💰 الإجمالي</div>
+            <div id="gps-cost-total" style="font-size:22px;font-weight:800;color:#00d4aa">0 ج.م</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:10px;color:#8a9ab8">💡 تكلفة الكيلومتر</div>
+            <div id="gps-cost-per-km" style="font-size:16px;font-weight:700;color:#ffd700">— ج.م</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -586,25 +596,112 @@ body::before {
 <div class="fp hidden" id="mappage">
   <div class="fpt">
     <div class="fptitle">🗺️ خريطة مباشرة — كل العربيات</div>
-    <div style="display:flex;gap:10px;align-items:center">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <span id="map-refresh-status" style="font-size:11px;color:#8a9ab8"></span>
       <button class="tb" style="background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.4);color:#a78bfa;padding:5px 12px" onclick="refreshManagerMap()">🔄 تحديث</button>
+      <button class="tb" style="background:rgba(0,212,170,.12);border:1px solid rgba(0,212,170,.35);color:#00d4aa;padding:5px 12px" onclick="exportMapReport()">📊 تقرير</button>
       <button class="tb" style="background:transparent;border:1px solid rgba(255,255,255,.1);color:#8a9ab8;border-radius:7px;padding:6px 14px" onclick="closePage('mappage')">✕</button>
     </div>
   </div>
   <div class="fpb" style="max-width:100%;padding:12px 16px;display:flex;flex-direction:column;gap:16px">
+
+    <!-- إعدادات تكلفة الرحلة لحظياً -->
+    <div class="card" style="border-color:rgba(255,215,0,.25);background:rgba(255,215,0,.03)">
+      <div class="ct" style="color:#ffd700">⚙️ معايير حساب التكلفة الإجمالية للرحلة</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end">
+        <div>
+          <label style="display:block;font-size:11px;color:#8a9ab8;margin-bottom:5px">⛽ سعر الوقود (ج.م/لتر)</label>
+          <input id="mc-fuel-price" type="number" min="0" step="0.25" value="13.75" class="fsel" style="width:100%" oninput="recomputeLiveCosts()">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:#8a9ab8;margin-bottom:5px">🔧 تكلفة صيانة (ج.م/كم)</label>
+          <input id="mc-maint-per-km" type="number" min="0" step="0.05" value="0.50" class="fsel" style="width:100%" oninput="recomputeLiveCosts()">
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button class="tb tb-t" style="width:100%" onclick="saveCostSettings()">💾 حفظ الإعدادات</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPIs -->
     <div class="kgrid" id="map-summary-kpis"></div>
-    <div style="border-radius:12px;overflow:hidden;border:1px solid rgba(139,92,246,.3);height:600px" id="map-container"></div>
+
+    <!-- بانيل إرسال رسائل للسواقين -->
+    <div class="card" style="border-color:rgba(251,113,133,.3);background:rgba(251,113,133,.03)">
+      <div class="ct" style="color:#fb7185">&#128232; إرسال رسالة للسواقين</div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:10px">
+        <div>
+          <label style="display:block;font-size:11px;color:#8a9ab8;margin-bottom:5px">الرسالة</label>
+          <input id="msg-text-inp" type="text" placeholder="اكتب رسالتك هنا..." class="fsel" style="width:100%" onkeydown="if(event.key===&apos;Enter&apos;)sendMsgToAll()">
+        </div>
+        <div>
+          <button class="tb" style="background:rgba(251,113,133,.15);border:1px solid rgba(251,113,133,.4);color:#fb7185;padding:8px 14px;white-space:nowrap" onclick="sendMsgToAll()">&#128226; للكل</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="msg-truck-sel" class="fsel" style="flex:1">
+          <option value="">— اختر عربية محددة (اختياري) —</option>
+        </select>
+        <button class="tb" style="background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.4);color:#a78bfa;padding:8px 14px;white-space:nowrap" onclick="sendMsgToTruck()">&#128666; للعربية</button>
+      </div>
+      <div id="msg-log" style="margin-top:10px;max-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+
+    <!-- الخريطة -->
+    <div style="border-radius:12px;overflow:hidden;border:1px solid rgba(139,92,246,.3);height:60vh;min-height:400px;position:relative" id="map-container">
+      <div id="map-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#0d1422;z-index:10;border-radius:12px">
+        <div style="text-align:center">
+          <div class="dot" style="width:16px;height:16px;margin:0 auto 12px"></div>
+          <div style="color:#8a9ab8;font-size:13px">جاري تحميل الخريطة...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Cost Cards per truck -->
+    <div>
+      <div class="sec">💰 تكلفة الرحلة الحالية لكل عربية</div>
+      <div id="live-cost-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
+    </div>
+
+    <!-- تقرير تكلفة الكيلومتر -->
     <div class="card">
-      <div class="ct" style="color:#a78bfa">📋 سجل رحلات السواقين <span id="map-trips-count"></span></div>
+      <div class="ct" style="color:#ffd700">📊 تكلفة الكيلومتر التاريخية لكل نوع عربية</div>
+      <div class="ts"><table class="tbl" id="km-cost-table">
+        <thead><tr>
+          <th>نوع العربية</th>
+          <th style="color:#4fb3ff">⛽ وقود/كم</th>
+          <th style="color:#00d4aa">🔧 صيانة/كم</th>
+          <th style="color:#ffd700">💰 إجمالي/كم</th>
+          <th style="color:#ffad33">📍 إجمالي كم</th>
+        </tr></thead>
+        <tbody id="km-cost-body"></tbody>
+      </table></div>
+    </div>
+
+    <!-- سجل الرحلات المفصّل -->
+    <div class="card">
+      <div class="ct" style="color:#a78bfa">📋 سجل رحلات السواقين <span id="map-trips-count"></span>
+        <button class="tb" style="background:rgba(255,140,0,.12);border:1px solid rgba(255,140,0,.35);color:#ffad33;font-size:10px;padding:3px 9px" onclick="exportTripsCSV()">⬇️ CSV</button>
+      </div>
       <div class="ts"><table class="tbl">
         <thead><tr>
-          <th>العربية</th><th>السواق</th><th>التاريخ</th><th>من — إلى</th>
-          <th>المسافة (كم)</th><th>الاستهلاك</th><th>سعر اللتر</th><th>التكلفة (ج.م)</th>
+          <th>العربية</th><th style="color:#ffad33">👤 السائق</th><th>التاريخ</th><th>من — إلى</th>
+          <th style="color:#22d3ee">المسافة (كم)</th>
+          <th style="color:#4fb3ff">⛽ وقود</th>
+          <th style="color:#c084fc">🔧 صيانة</th>
+          <th style="color:#ffd700">💰 إجمالي ج.م</th>
+          <th style="color:#a78bfa">ج.م/كم</th>
         </tr></thead>
         <tbody id="map-trips-body"></tbody>
       </table></div>
     </div>
+
+    <!-- تقرير الأداء التاريخي -->
+    <div class="card">
+      <div class="ct" style="color:#fb7185">📈 مقارنة استهلاك الوقود الفعلي vs المعياري</div>
+      <div class="ch ch240"><canvas id="cFuelCompare"></canvas></div>
+    </div>
+
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -2634,33 +2731,80 @@ function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.c
 // =========================================
 // ✏️ غيّر كلمة مرور الـ Admin هنا:
 var _ADMIN_PASS = 'omar2025';
-// =========================================
+// ========= USER MANAGEMENT — Firebase =========
 var _currentUser = null;
-function _getUsers(){
-  try{var s=localStorage.getItem('flt_users');if(s){var u=JSON.parse(s);if(u&&u.length)return u;}}catch(e){}
-  return [{username:'admin',password:_ADMIN_PASS,role:'admin'}];
-}
-function _saveUsers(u){try{localStorage.setItem('flt_users',JSON.stringify(u));}catch(e){}}
+var _FB_USERS = FB_URL + '/fleet_users';
+
 function _getSession(){try{return JSON.parse(sessionStorage.getItem('flt_sess')||'null');}catch(e){return null;}}
 function _setSession(u){try{sessionStorage.setItem('flt_sess',JSON.stringify(u));}catch(e){}}
+function _clearSession(){try{sessionStorage.removeItem('flt_sess');}catch(e){}}
+
+// جيب المستخدمين من Firebase
+function _fetchUsers(cb){
+  fetch(_FB_USERS+'.json')
+    .then(function(r){return r.json();})
+    .then(function(data){
+      var users=[];
+      if(data&&typeof data==='object'){
+        Object.keys(data).forEach(function(k){
+          if(data[k])users.push(Object.assign({},data[k],{_key:k}));
+        });
+      }
+      // لو Firebase فاضي — أنشئ admin افتراضي
+      if(!users.length){
+        var adminObj={username:'admin',password:_ADMIN_PASS,role:'admin'};
+        fetch(_FB_USERS+'.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(adminObj)})
+          .then(function(r){return r.json();})
+          .then(function(res){adminObj._key=res.name;users=[adminObj];cb(users);})
+          .catch(function(){cb([adminObj]);});
+      } else {
+        cb(users);
+      }
+    })
+    .catch(function(){
+      // Fallback لو Firebase فشل
+      cb([{username:'admin',password:_ADMIN_PASS,role:'admin'}]);
+    });
+}
+
+// إضافة مستخدم لـ Firebase
+function _addUserFB(userObj,cb){
+  fetch(_FB_USERS+'.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(userObj)})
+    .then(function(r){return r.json();})
+    .then(function(res){if(cb)cb(res.name);})
+    .catch(function(){if(cb)cb(null);});
+}
+
+// حذف مستخدم من Firebase
+function _delUserFB(key,cb){
+  fetch(_FB_USERS+'/'+key+'.json',{method:'DELETE'})
+    .then(function(){if(cb)cb();})
+    .catch(function(){if(cb)cb();});
+}
 
 function doLogin(){
-  var u=(document.getElementById('l-user').value||'').trim();
+  var u=(document.getElementById('l-user').value||'').trim().toLowerCase();
   var p=(document.getElementById('l-pass').value||'');
   var err=document.getElementById('l-err');
+  var btn=document.querySelector('#login-overlay button');
   err.style.display='none';
-  var found=_getUsers().find(function(x){return x.username===u&&x.password===p;});
-  if(found){
-    _currentUser=found;
-    _setSession(found);
-    document.getElementById('login-overlay').style.display='none';
-    document.getElementById('ub-name').textContent=found.username+' ('+(found.role==='admin'?'مدير':'مستخدم')+')';
-    applyRoleRestrictions(found.role);
-  } else {
-    err.style.display='block';
-    document.getElementById('l-pass').value='';
-  }
+  if(btn){btn.textContent='جاري التحقق...';btn.disabled=true;}
+  _fetchUsers(function(users){
+    if(btn){btn.textContent='دخول';btn.disabled=false;}
+    var found=users.find(function(x){return x.username.toLowerCase()===u&&x.password===p;});
+    if(found){
+      _currentUser=found;
+      _setSession(found);
+      document.getElementById('login-overlay').style.display='none';
+      document.getElementById('ub-name').textContent=found.username+' ('+(found.role==='admin'?'مدير':'مستخدم')+')';
+      applyRoleRestrictions(found.role);
+    } else {
+      err.style.display='block';
+      document.getElementById('l-pass').value='';
+    }
+  });
 }
+
 function applyRoleRestrictions(role){
   if(role!=='admin'){
     document.querySelectorAll('.ro-hide').forEach(function(el){el.style.setProperty('display','none','important');});
@@ -2672,54 +2816,85 @@ function applyRoleRestrictions(role){
     });
   }
 }
+
 function openUmgr(){
   if(!_currentUser||_currentUser.role!=='admin'){toast('⚠️ صلاحية Admin فقط');return;}
   renderUmgr();
   document.getElementById('umgr').classList.remove('hidden');
 }
+
 function renderUmgr(){
-  var users=_getUsers();
   var tb=document.getElementById('um-tbody');
-  tb.innerHTML='';
-  users.forEach(function(u,i){
-    var tr=document.createElement('tr');
-    tr.innerHTML='<td>'+u.username+'</td><td><span class="badge-'+u.role+'">'+u.role+'</span></td>'
-      +'<td style="text-align:center"><button onclick="umDel('+i+')" class="delbtn">✕</button></td>';
-    tb.appendChild(tr);
+  tb.innerHTML='<tr><td colspan="3" style="text-align:center;color:#8a9ab8;padding:10px">جاري التحميل...</td></tr>';
+  _fetchUsers(function(users){
+    tb.innerHTML='';
+    users.forEach(function(u){
+      var tr=document.createElement('tr');
+      var isMe=u.username===(_currentUser&&_currentUser.username);
+      tr.innerHTML='<td><strong>'+u.username+'</strong></td>'
+        +'<td><span class="badge-'+u.role+'">'+u.role+'</span></td>'
+        +'<td style="text-align:center">'
+        +(isMe?'<span style="color:#4a5670;font-size:11px">أنت</span>'
+               :'<button onclick="umDel(\''+u._key+'\',\''+u.username+'\')" class="delbtn">✕</button>')
+        +'</td>';
+      tb.appendChild(tr);
+    });
+    if(!users.length)tb.innerHTML='<tr><td colspan="3" style="text-align:center;color:#4a5670;padding:10px">لا يوجد مستخدمين</td></tr>';
   });
 }
+
 function umAdd(){
   var u=(document.getElementById('um-user').value||'').trim();
   var p=(document.getElementById('um-pass').value||'');
   var r=document.getElementById('um-role').value;
   if(!u||!p){toast('⚠️ ادخل اسم المستخدم وكلمة المرور');return;}
-  var users=_getUsers();
-  if(users.find(function(x){return x.username===u;})){toast('⚠️ الاسم ده موجود');return;}
-  users.push({username:u,password:p,role:r});
-  _saveUsers(users);
-  document.getElementById('um-user').value='';
-  document.getElementById('um-pass').value='';
-  renderUmgr();
-  toast('✅ تم إضافة: '+u);
+  // تحقق مش موجود
+  _fetchUsers(function(users){
+    if(users.find(function(x){return x.username.toLowerCase()===u.toLowerCase();})){
+      toast('⚠️ الاسم ده موجود');return;
+    }
+    _addUserFB({username:u,password:p,role:r},function(key){
+      if(key){
+        document.getElementById('um-user').value='';
+        document.getElementById('um-pass').value='';
+        renderUmgr();
+        toast('✅ تم إضافة: '+u+' — هيقدر يدخل من أي جهاز دلوقتي');
+      } else {
+        toast('⚠️ فشل الإضافة، تحقق من الاتصال');
+      }
+    });
+  });
 }
-function umDel(i){
-  var users=_getUsers();
-  if(users[i]&&users[i].username===(_currentUser&&_currentUser.username)){toast('⚠️ مش هتقدر تحذف نفسك');return;}
-  users.splice(i,1);
-  _saveUsers(users);
-  renderUmgr();
-  toast('تم الحذف');
+
+function umDel(key,username){
+  if(!key){toast('⚠️ خطأ في الحذف');return;}
+  if(username===(_currentUser&&_currentUser.username)){toast('⚠️ مش هتقدر تحذف نفسك');return;}
+  _delUserFB(key,function(){
+    renderUmgr();
+    toast('✅ تم حذف: '+username);
+  });
 }
-// Auto-login from session
+
+// Auto-login من الـ session
 (function(){
   var s=_getSession();
   if(s){
-    _currentUser=s;
-    document.getElementById('login-overlay').style.display='none';
-    document.getElementById('ub-name').textContent=s.username+' ('+(s.role==='admin'?'مدير':'مستخدم')+')';
-    applyRoleRestrictions(s.role);
+    // تحقق إن اليوزر لسه موجود في Firebase
+    _fetchUsers(function(users){
+      var stillValid=users.find(function(x){return x.username===s.username&&x.password===s.password;});
+      if(stillValid){
+        _currentUser=stillValid;
+        document.getElementById('login-overlay').style.display='none';
+        document.getElementById('ub-name').textContent=stillValid.username+' ('+(stillValid.role==='admin'?'مدير':'مستخدم')+')';
+        applyRoleRestrictions(stillValid.role);
+      } else {
+        // اليوزر اتحذف — سجّل خروج
+        _clearSession();
+      }
+    });
   }
 })();
+// ========= END USER MANAGEMENT =========
 
 
 function openCostAnalysis(){
@@ -3341,18 +3516,54 @@ function renderCostAnalysis(){
       toast('✅ تم حفظ جميع البيانات!');
     }catch(ex){alert('تعذر الحفظ: '+ex.message);}
   }
-  // ==================== MANAGER LIVE MAP ====================
+  // ==================== MANAGER LIVE MAP (ENHANCED) ====================
   var _managerMap=null, _mapMarkers={}, _mapRefreshTimer=null;
+  var _lastPositions={}, _lastTrips=[], _lastViolations={};
+
+  // ---- Cost settings (persist to localStorage) ----
+  function loadCostSettings(){
+    try{
+      var s=JSON.parse(localStorage.getItem('fleet_costSettings')||'{}');
+      if(s.fuelPrice)document.getElementById('mc-fuel-price').value=s.fuelPrice;
+      if(s.maintPerKm)document.getElementById('mc-maint-per-km').value=s.maintPerKm;
+    }catch(_e){}
+  }
+  function saveCostSettings(){
+    try{
+      var s={
+        fuelPrice:parseFloat(document.getElementById('mc-fuel-price').value)||13.75,
+        maintPerKm:parseFloat(document.getElementById('mc-maint-per-km').value)||0.50
+      };
+      localStorage.setItem('fleet_costSettings',JSON.stringify(s));
+      toast('✅ تم حفظ إعدادات التكلفة');
+    }catch(_e){}
+  }
+  function getCostParams(){
+    return {
+      fuelPrice:parseFloat(document.getElementById('mc-fuel-price').value)||13.75,
+      maintPerKm:parseFloat(document.getElementById('mc-maint-per-km').value)||0.50
+    };
+  }
+
+  // ---- Full trip cost = fuel + maintenance فقط ----
+  function calcTripFullCost(distanceKm, cons, fuelPriceOverride){
+    var cp=getCostParams();
+    var fp=fuelPriceOverride||cp.fuelPrice;
+    var fuelCost=cons>0?(distanceKm/cons)*fp:0;
+    var maintCost=distanceKm*cp.maintPerKm;
+    return {fuelCost:fuelCost,maintCost:maintCost,total:fuelCost+maintCost};
+  }
 
   function openManagerMap(){
+    loadCostSettings();
     document.getElementById('mappage').classList.remove('hidden');
     setTimeout(function(){
       if(_managerMap)_managerMap.invalidateSize();
       refreshManagerMap();
     },150);
+    if(_mapRefreshTimer)clearInterval(_mapRefreshTimer);
     _mapRefreshTimer=setInterval(refreshManagerMap,10000);
   }
-
 
   function refreshManagerMap(){
     var st=document.getElementById('map-refresh-status');
@@ -3362,79 +3573,356 @@ function renderCostAnalysis(){
       fetch(FB_URL+'/gps_trips.json').then(function(r){return r.json();}).catch(function(){return null;}),
       fetch(FB_URL+'/gps_violations.json').then(function(r){return r.json();}).catch(function(){return null;})
     ]).then(function(results){
-      var positions=results[0]||{}, trips=results[1]||{}, violations=results[2]||{};
-      renderLiveMap(positions,violations);
-      renderFirebaseTrips(trips);
+      _lastPositions=results[0]||{};
+      _lastViolations=results[2]||{};
+      var tripsObj=results[1]||{};
+      _lastTrips=Object.values(tripsObj).sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+      renderLiveMap(_lastPositions,_lastViolations);
+      renderFirebaseTrips(tripsObj);
+      renderLiveCostCards(_lastPositions);
+      renderKmCostTable(_lastTrips);
+      renderFuelCompareChart(_lastTrips);
+      buildMsgTruckList();
       if(st)st.textContent='آخر تحديث: '+new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     }).catch(function(){if(st)st.textContent='⚠️ تعذر التحديث';});
+  }
+
+  function recomputeLiveCosts(){
+    if(Object.keys(_lastPositions).length)renderLiveCostCards(_lastPositions);
+    if(_lastTrips.length)renderFirebaseTrips(null);
   }
 
   function renderLiveMap(positions,violations){
     violations=violations||{};
     var container=document.getElementById('map-container');if(!container)return;
-    if(typeof L==='undefined'){container.innerHTML='<div style="color:#8a9ab8;text-align:center;padding:40px">Leaflet map library not loaded</div>';return;}
-    if(!_managerMap){
-      container.innerHTML='';
-      _managerMap=L.map(container).setView([30.0444,31.2357],10);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:18}).addTo(_managerMap);
+    var loading=document.getElementById('map-loading');
+    if(typeof L==='undefined'){
+      container.innerHTML='<div style="color:#8a9ab8;text-align:center;padding:40px;background:#0d1422;height:100%;display:flex;align-items:center;justify-content:center"><div><div style="font-size:32px;margin-bottom:12px">🗺️</div><div>Leaflet map library not loaded<br><span style="font-size:11px;color:#4a5670">أضف: &lt;script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"&gt;&lt;/script&gt;</span></div></div></div>';
+      return;
     }
-    var activeCount=0,speedingCount=0,bounds=[];
+    if(loading)loading.style.display='none';
+    if(!_managerMap){
+      _managerMap=L.map(container,{zoomControl:true}).setView([30.0444,31.2357],10);
+      var _streetsLayer=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19});
+      var _satLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles © Esri',maxZoom:19});
+      var _satLabels=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,pane:'shadowPane'});
+      var _hybridLayer=L.layerGroup([_satLayer,_satLabels]);
+      _streetsLayer.addTo(_managerMap);
+      L.control.layers({'🗺️ خريطة عادية':_streetsLayer,'🛰️ قمر صناعي':_hybridLayer},null,{position:'topleft',collapsed:false}).addTo(_managerMap);
+      L.control.scale({imperial:false,position:'bottomleft'}).addTo(_managerMap);
+    }
+    var activeCount=0,speedingCount=0,totalLiveCost=0,bounds=[];
+    var cp=getCostParams();
     Object.keys(positions).forEach(function(key){
       var p=positions[key];if(!p||!p.lat||!p.lng)return;
       var isActive=p.active&&(Date.now()-p.ts<300000);
       var isSpeeding=p.speeding&&isActive;
       var viol=violations[key];
-      var violRecent=viol&&(Date.now()-viol.ts<120000); // مخالفة آخر دقيقتين
+      var violRecent=viol&&(Date.now()-viol.ts<120000);
       var color=isSpeeding||violRecent?'#ff4444':isActive?'#00d4aa':'#4a5670';
       var icon_emoji=isSpeeding||violRecent?'🚨':'🚚';
+      var durationHrs=p.startTime?((Date.now()-p.startTime)/3600000):0;
+      var costs=calcTripFullCost(p.distanceKm||0,p.cons||9,null,durationHrs);
+      if(isActive)totalLiveCost+=costs.total;
       var iconHtml='<div style="background:'+color+';width:40px;height:40px;border-radius:50%;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,.5)'+(isSpeeding?';animation:pulse-icon 0.5s infinite alternate':'')+' ">'+icon_emoji+'</div>';
       var icon=L.divIcon({html:iconHtml,className:'',iconSize:[40,40],iconAnchor:[20,20]});
-      var _fp=fuelPrice||13.75;var liveCost=p.cons>0&&p.distanceKm>0?((p.distanceKm/p.cons)*_fp):0;
       var violLine=violRecent?('<br><span style="color:#ff4444;font-weight:700">🚨 تجاوز السرعة! '+viol.speed+' كم/س (الحد: '+viol.limit+')</span>'):'';
-      var activeLabel=isActive?'نشط الآن':'آخر ظهور: '+new Date(p.ts).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
-      var activeColor=isActive?'#00d4aa':'#8a9ab8';
+      var activeLabel=isActive?'<span style="color:#00d4aa">● نشط الآن</span>':'<span style="color:#4a5670">⏸ آخر ظهور: '+new Date(p.ts).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})+'</span>';
       var speedColor=isSpeeding?'#ff4444':'#ffd700';
-      var popupText='<div dir="rtl" style="font-family:inherit;min-width:200px"><strong style="color:#22d3ee;font-size:15px">🚚 '+escHtml(p.truck||key)+'</strong><br><span style="color:#8a9ab8;font-size:11px">'+escHtml(p.truckType||'')+'</span><hr style="border:none;border-top:1px solid rgba(255,255,255,.1);margin:6px 0"><b>📍 مسافة:</b> <span style="color:#22d3ee">'+((p.distanceKm||0).toFixed(2))+' كم</span><br><b>🚀 سرعة:</b> <span style="color:'+speedColor+'">'+Math.round(p.speed||0)+' كم/س</span><br><b>💰 تكلفة حتى الآن:</b> <span style="color:#00d4aa;font-weight:700">'+liveCost.toFixed(2)+' ج.م</span>'+violLine+'<br><span style="color:'+activeColor+';font-size:11px">● '+activeLabel+'</span></div>';
+      var costPerKm=p.distanceKm>0?(costs.total/p.distanceKm).toFixed(2):'-';
+      var popupText='<div dir="rtl" style="font-family:inherit;min-width:230px;font-size:13px">'+
+        '<strong style="color:#22d3ee;font-size:15px">🚚 '+escHtml(p.truck||key)+'</strong>'+
+        '<span style="display:block;color:#8a9ab8;font-size:11px;margin-bottom:8px">'+escHtml(p.truckType||'')+'</span>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-bottom:8px">'+
+          '<div><span style="color:#8a9ab8;font-size:10px">📍 مسافة</span><br><strong style="color:#22d3ee">'+((p.distanceKm||0).toFixed(2))+' كم</strong></div>'+
+          '<div><span style="color:#8a9ab8;font-size:10px">🚀 سرعة</span><br><strong style="color:'+speedColor+'">'+Math.round(p.speed||0)+' كم/س</strong></div>'+
+          '<div><span style="color:#8a9ab8;font-size:10px">⛽ وقود</span><br><strong style="color:#4fb3ff">'+costs.fuelCost.toFixed(2)+' ج.م</strong></div>'+
+          '<div><span style="color:#8a9ab8;font-size:10px">🔧 صيانة</span><br><strong style="color:#c084fc">'+costs.maintCost.toFixed(2)+' ج.م</strong></div>'+
+          '<div><span style="color:#8a9ab8;font-size:10px">💡 ج.م/كم</span><br><strong style="color:#ffd700">'+costPerKm+'</strong></div>'+
+        '</div>'+
+        '<div style="background:rgba(0,212,170,.12);border:1px solid rgba(0,212,170,.3);border-radius:7px;padding:6px 10px;text-align:center;margin-bottom:6px">'+
+          '<span style="font-size:12px;color:#8a9ab8">💰 إجمالي التكلفة</span><br>'+
+          '<strong style="font-size:18px;color:#00d4aa">'+costs.total.toFixed(2)+' ج.م</strong>'+
+        '</div>'+
+        violLine+'<div style="font-size:11px;margin-top:4px">'+activeLabel+'</div></div>';
       if(_mapMarkers[key]){_mapMarkers[key].setLatLng([p.lat,p.lng]).setIcon(icon).getPopup().setContent(popupText);}
-      else{_mapMarkers[key]=L.marker([p.lat,p.lng],{icon:icon}).addTo(_managerMap).bindPopup(popupText);}
+      else{_mapMarkers[key]=L.marker([p.lat,p.lng],{icon:icon}).addTo(_managerMap).bindPopup(popupText,{maxWidth:280});}
       if(isActive)_mapMarkers[key].openPopup();
       bounds.push([p.lat,p.lng]);
       if(isActive)activeCount++;
       if(isSpeeding||violRecent)speedingCount++;
     });
-    if(bounds.length)try{_managerMap.fitBounds(bounds,{padding:[30,30],maxZoom:14});}catch(_e){}
+    if(bounds.length)try{_managerMap.fitBounds(bounds,{padding:[50,50],maxZoom:14});}catch(_e){}
     var kpiEl=document.getElementById('map-summary-kpis');
     if(kpiEl)kpiEl.innerHTML=
       '<div class="kpi"><div class="kv" style="color:#00d4aa">'+activeCount+'</div><div class="kl">عربيات نشطة الآن</div></div>'+
       '<div class="kpi"><div class="kv" style="color:#8a9ab8">'+Object.keys(positions).length+'</div><div class="kl">إجمالي المتتبعة</div></div>'+
-      (speedingCount?'<div class="kpi"><div class="kv" style="color:#ff4444;animation:pulse-icon 0.6s infinite alternate">🚨 '+speedingCount+'</div><div class="kl">تجاوز السرعة الآن</div></div>':'');
+      '<div class="kpi"><div class="kv" style="color:#ffd700">'+totalLiveCost.toLocaleString(undefined,{maximumFractionDigits:0})+' ج.م</div><div class="kl">💰 إجمالي تكلفة الرحلات الحالية</div></div>'+
+      (speedingCount?'<div class="kpi"><div class="kv" style="color:#ff4444">🚨 '+speedingCount+'</div><div class="kl">تجاوز السرعة الآن</div></div>':'');
+  }
+
+  function renderLiveCostCards(positions){
+    var el=document.getElementById('live-cost-cards');if(!el)return;
+    var cp=getCostParams();
+    var active=Object.keys(positions).filter(function(k){var p=positions[k];return p&&p.lat&&p.lng&&p.active&&(Date.now()-p.ts<300000);});
+    if(!active.length){el.innerHTML='<div style="color:#4a5670;font-size:13px;padding:20px;text-align:center">لا توجد عربيات نشطة الآن</div>';return;}
+    el.innerHTML=active.map(function(key){
+      var p=positions[key];
+      var durationHrs=p.startTime?((Date.now()-p.startTime)/3600000):0;
+      var costs=calcTripFullCost(p.distanceKm||0,p.cons||9,null,durationHrs);
+      var costPerKm=p.distanceKm>0?(costs.total/p.distanceKm):0;
+      var isSpeeding=p.speeding;
+      var border=isSpeeding?'rgba(255,68,68,.5)':'rgba(0,212,170,.3)';
+      return '<div style="background:#111827;border:1px solid '+border+';border-radius:12px;padding:14px;position:relative">'+
+        (isSpeeding?'<div style="position:absolute;top:8px;left:8px;background:#ff4444;color:white;font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px">🚨 تجاوز سرعة</div>':'')+
+        '<div style="font-size:14px;font-weight:700;color:#22d3ee;margin-bottom:2px">🚚 '+escHtml(String(p.truck||key))+'</div>'+
+        '<div style="font-size:11px;color:#4a5670;margin-bottom:10px">'+escHtml(p.truckType||'')+'</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">'+
+          '<div style="background:#0d1422;border-radius:7px;padding:8px;text-align:center">'+
+            '<div style="font-size:16px;font-weight:700;color:#22d3ee">'+((p.distanceKm||0).toFixed(1))+'</div>'+
+            '<div style="font-size:10px;color:#8a9ab8">كيلومتر</div>'+
+          '</div>'+
+          '<div style="background:#0d1422;border-radius:7px;padding:8px;text-align:center">'+
+            '<div style="font-size:16px;font-weight:700;color:#ffd700">'+Math.round(p.speed||0)+' كم/س</div>'+
+            '<div style="font-size:10px;color:#8a9ab8">السرعة</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">'+
+          '<div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8a9ab8">⛽ وقود</span><span style="font-size:11px;font-weight:700;color:#4fb3ff">'+costs.fuelCost.toFixed(2)+' ج.م</span></div>'+
+          '<div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8a9ab8">🔧 صيانة</span><span style="font-size:11px;font-weight:700;color:#c084fc">'+costs.maintCost.toFixed(2)+' ج.م</span></div>'+
+          (durationHrs>0?'<div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8a9ab8">🕐 مدة</span><span style="font-size:11px;color:#8a9ab8">'+durationHrs.toFixed(1)+' س</span></div>':'')+
+        '</div>'+
+        '<div style="background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.25);border-radius:8px;padding:8px;display:flex;justify-content:space-between;align-items:center">'+
+          '<div><div style="font-size:10px;color:#8a9ab8">💰 إجمالي</div><div style="font-size:18px;font-weight:800;color:#00d4aa">'+costs.total.toFixed(2)+' ج.م</div></div>'+
+          '<div style="text-align:center"><div style="font-size:10px;color:#8a9ab8">💡 ج.م/كم</div><div style="font-size:14px;font-weight:700;color:#ffd700">'+(costPerKm>0?costPerKm.toFixed(2):'—')+'</div></div>'+
+        '</div>'+
+      '</div>';
+    }).join('');
   }
 
   function renderFirebaseTrips(tripsObj){
-    var trips=Object.values(tripsObj||{}).sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+    if(tripsObj!==null)_lastTrips=Object.values(tripsObj||{}).sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+    var trips=_lastTrips;
     var body=document.getElementById('map-trips-body');if(!body)return;
-    var totalDist=trips.reduce(function(s,t){return s+(t.distanceKm||0);},0);
-    var totalCost=trips.reduce(function(s,t){return s+(t.cost||0);},0);
+    var cp=getCostParams();
+    var totalDist=0,totalFuel=0,totalMaint=0,totalFull=0;
     var cntEl=document.getElementById('map-trips-count');
     if(cntEl)cntEl.textContent='('+trips.length+')';
-    var kpiEl=document.getElementById('map-summary-kpis');
-    if(kpiEl)kpiEl.innerHTML+='<div class="kpi"><div class="kv" style="color:#22d3ee">'+totalDist.toLocaleString(undefined,{maximumFractionDigits:1})+' كم</div><div class="kl">إجمالي المسافة (GPS)</div></div>'+
-      '<div class="kpi"><div class="kv" style="color:#ffd700">'+totalCost.toLocaleString(undefined,{maximumFractionDigits:2})+' ج.م</div><div class="kl">إجمالي تكلفة الوقود</div></div>';
     body.innerHTML=trips.map(function(t){
       var sl=t.startLabel||t.start||'—';
-      var el=t.endLabel||t.end||'—';
-      var fp=t.fuelPrice||13.75;
-      var cost=t.cost||(t.cons>0&&t.distanceKm>0?(t.distanceKm/t.cons)*fp:0);
-      return '<tr><td><strong>'+escHtml(t.truck||'')+'</strong><br><span style="color:#8a9ab8;font-size:10px">'+escHtml(t.truckType||'')+'</span></td>'+
+      var el_=t.endLabel||t.end||'—';
+      var fp=t.fuelPrice||cp.fuelPrice;
+      var dist=t.distanceKm||0;
+      var cons=t.cons||9;
+      var driverName=t.driverName||'';
+      var costs=calcTripFullCost(dist,cons,fp);
+      totalDist+=dist;totalFuel+=costs.fuelCost;totalMaint+=costs.maintCost;totalFull+=costs.total;
+      var cpkm=dist>0?(costs.total/dist).toFixed(2):'—';
+      return '<tr>'+
+        '<td><strong>'+escHtml(t.truck||'')+'</strong><br><span style="color:#8a9ab8;font-size:10px">'+escHtml(t.truckType||'')+'</span></td>'+
+        '<td>'+(driverName?('<strong style="color:#ffad33">'+escHtml(driverName)+'</strong>'):'<span style="color:#4a5670">—</span>')+'</td>'+
         '<td style="color:#8a9ab8;font-size:11px">'+escHtml(t.date||'')+'</td>'+
-        '<td style="color:#8a9ab8;font-size:11px">'+escHtml(sl)+' ← '+escHtml(el)+'</td>'+
-        '<td style="color:#22d3ee;font-weight:700">'+((t.distanceKm||0).toFixed(2))+'</td>'+
-        '<td>'+((t.cons||0))+' كم/لتر</td>'+
-        '<td>'+fp+' ج.م</td>'+
-        '<td style="color:#00d4aa;font-weight:700">'+cost.toLocaleString(undefined,{maximumFractionDigits:2})+' ج.م</td></tr>';
-    }).join('')||'<tr><td colspan="8" style="text-align:center;color:#4a5670;padding:20px">لسه مفيش رحلات من السواقين</td></tr>';
+        '<td style="color:#8a9ab8;font-size:11px">'+escHtml(sl)+' ← '+escHtml(el_)+'</td>'+
+        '<td style="color:#22d3ee;font-weight:700">'+dist.toFixed(2)+'</td>'+
+        '<td style="color:#4fb3ff">'+costs.fuelCost.toFixed(2)+' ج.م</td>'+
+        '<td style="color:#c084fc">'+costs.maintCost.toFixed(2)+' ج.م</td>'+
+        '<td style="color:#00d4aa;font-weight:700">'+costs.total.toFixed(2)+' ج.م</td>'+
+        '<td style="color:#ffd700">'+cpkm+'</td></tr>';
+    }).join('')||'<tr><td colspan="9" style="text-align:center;color:#4a5670;padding:20px">لسه مفيش رحلات من السواقين</td></tr>';
+    // update KPIs with totals
+    var kpiEl=document.getElementById('map-summary-kpis');
+    if(kpiEl){
+      // remove old trip kpis if appended before
+      var extras=kpiEl.querySelectorAll('.trip-kpi');
+      extras.forEach(function(e){e.remove();});
+      var add=function(v,l){var d=document.createElement('div');d.className='kpi trip-kpi';d.innerHTML='<div class="kv" style="color:'+l.c+'">'+v+'</div><div class="kl">'+l.t+'</div>';kpiEl.appendChild(d);};
+      add(totalDist.toLocaleString(undefined,{maximumFractionDigits:1})+' كم',{c:'#22d3ee',t:'إجمالي المسافة (GPS)'});
+      add(totalFuel.toLocaleString(undefined,{maximumFractionDigits:0})+' ج.م',{c:'#4fb3ff',t:'⛽ إجمالي تكلفة الوقود'});
+      add(totalMaint.toLocaleString(undefined,{maximumFractionDigits:0})+' ج.م',{c:'#c084fc',t:'🔧 إجمالي تكلفة الصيانة'});
+      add(totalFull.toLocaleString(undefined,{maximumFractionDigits:0})+' ج.م',{c:'#00d4aa',t:'💰 إجمالي تكلفة الرحلات'});
+    }
   }
-  // ==================== END MANAGER MAP ====================
+
+  function renderKmCostTable(trips){
+    var body=document.getElementById('km-cost-body');if(!body)return;
+    var cp=getCostParams();
+    var byType={};
+    trips.forEach(function(t){
+      var tt=t.truckType||'غير محدد';
+      if(!byType[tt])byType[tt]={totalFuel:0,totalMaint:0,totalKm:0,count:0};
+      var dist=t.distanceKm||0;
+      var fp=t.fuelPrice||cp.fuelPrice;
+      var fc=t.cons>0?(dist/t.cons)*fp:0;
+      var mc=dist*cp.maintPerKm;
+      byType[tt].totalFuel+=fc;byType[tt].totalMaint+=mc;byType[tt].totalKm+=dist;byType[tt].count++;
+    });
+    var rows=Object.entries(byType).sort(function(a,b){return b[1].totalKm-a[1].totalKm;});
+    body.innerHTML=rows.map(function(e){
+      var tt=e[0];var d=e[1];
+      var fuelPerKm=d.totalKm>0?(d.totalFuel/d.totalKm).toFixed(2):'—';
+      var maintPerKm_=d.totalKm>0?(d.totalMaint/d.totalKm).toFixed(2):'—';
+      var totalPerKm=d.totalKm>0?((d.totalFuel+d.totalMaint)/d.totalKm).toFixed(2):'—';
+      return '<tr>'+
+        '<td><strong>'+escHtml(tt)+'</strong><span style="color:#4a5670;font-size:10px;margin-right:6px">('+d.count+' رحلة)</span></td>'+
+        '<td style="color:#4fb3ff;font-weight:700">'+fuelPerKm+' ج.م</td>'+
+        '<td style="color:#c084fc;font-weight:700">'+maintPerKm_+' ج.م</td>'+
+        '<td style="color:#ffd700;font-weight:700">'+totalPerKm+' ج.م</td>'+
+        '<td style="color:#8a9ab8">'+d.totalKm.toLocaleString(undefined,{maximumFractionDigits:0})+' كم</td>'+
+        '</tr>';
+    }).join('')||'<tr><td colspan="5" style="text-align:center;color:#4a5670;padding:14px">لا توجد بيانات بعد</td></tr>';
+  }
+
+  function renderFuelCompareChart(trips){
+    if(typeof Chart==='undefined')return;
+    var cp=getCostParams();
+    // group by truck type: actual cons (km/L) from trips vs FUEL_STANDARDS
+    var byType={};
+    trips.forEach(function(t){
+      var tt=t.truckType||'غير محدد';
+      if(!byType[tt])byType[tt]={totalKm:0,totalLiters:0,count:0};
+      var dist=t.distanceKm||0;var cons=t.cons||9;
+      byType[tt].totalKm+=dist;byType[tt].totalLiters+=(cons>0?dist/cons:0);byType[tt].count++;
+    });
+    var labels=[],actuals=[],standards=[];
+    var stdMap={};
+    if(typeof FUEL_STANDARDS!=='undefined')FUEL_STANDARDS.forEach(function(s){stdMap[s.type.toLowerCase()]=s.cons;});
+    Object.entries(byType).forEach(function(e){
+      if(!e[1].totalKm)return;
+      labels.push(e[0]);
+      var actualCons=e[1].totalLiters>0?(e[1].totalKm/e[1].totalLiters):0;
+      actuals.push(+actualCons.toFixed(2));
+      // find standard
+      var std=null;
+      Object.keys(stdMap).forEach(function(k){if(e[0].toLowerCase().includes(k))std=stdMap[k];});
+      standards.push(std||null);
+    });
+    var cEl=document.getElementById('cFuelCompare');if(!cEl)return;
+    if(charts['cFuelCompare'])charts['cFuelCompare'].destroy();
+    charts['cFuelCompare']=new Chart(cEl,{
+      type:'bar',
+      data:{labels:labels,datasets:[
+        {label:'الاستهلاك الفعلي (كم/لتر)',data:actuals,backgroundColor:'rgba(79,179,255,.8)',borderRadius:4,borderSkipped:false},
+        {label:'المعياري (كم/لتر)',data:standards,backgroundColor:'rgba(0,212,170,.35)',borderRadius:4,borderSkipped:false,type:'bar'}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8a9ab8',font:{size:10}}},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+ctx.raw+' كم/لتر';}}}},scales:{x:{grid:{display:false},ticks:{color:'#8a9ab8',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8a9ab8',callback:function(v){return v+' كم/ل';}}}}}
+    });
+  }
+
+  // ---- Export functions ----
+  function exportTripsCSV(){
+    var cp=getCostParams();
+    var rows=[['العربية','النوع','التاريخ','من','إلى','المسافة (كم)','الاستهلاك','سعر الوقود','تكلفة الوقود','تكلفة الصيانة','إجمالي التكلفة','ج.م/كم']];
+    _lastTrips.forEach(function(t){
+      var dist=t.distanceKm||0;var fp=t.fuelPrice||cp.fuelPrice;var cons=t.cons||9;
+      var costs=calcTripFullCost(dist,cons,fp);
+      rows.push([t.truck||'',t.truckType||'',t.date||'',(t.startLabel||t.start||''),(t.endLabel||t.end||''),dist.toFixed(2),cons,fp,costs.fuelCost.toFixed(2),costs.maintCost.toFixed(2),costs.total.toFixed(2),(dist>0?(costs.total/dist).toFixed(2):'')]);
+    });
+    var csv=rows.map(function(r){return r.join(',');}).join('\n');
+    var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fleet_trips_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+    toast('✅ تم تصدير CSV');
+  }
+
+  function exportMapReport(){
+    var cp=getCostParams();
+    var totalDist=_lastTrips.reduce(function(s,t){return s+(t.distanceKm||0);},0);
+    var totalCosts=_lastTrips.reduce(function(s,t){var c=calcTripFullCost(t.distanceKm||0,t.cons||9,t.fuelPrice||cp.fuelPrice);return s+c.total;},0);
+    var activeCount=Object.keys(_lastPositions).filter(function(k){var p=_lastPositions[k];return p&&p.active&&(Date.now()-p.ts<300000);}).length;
+    var reportLines=[
+      'تقرير Fleet Management — '+new Date().toLocaleString('ar-EG'),
+      '═══════════════════════════════',
+      'إجمالي الرحلات المسجلة: '+_lastTrips.length,
+      'إجمالي المسافة: '+totalDist.toFixed(1)+' كم',
+      'إجمالي التكلفة: '+totalCosts.toFixed(0)+' ج.م',
+      'عربيات نشطة الآن: '+activeCount,
+      '───────────────────────────────',
+      'معايير الحساب المستخدمة:',
+      '  سعر الوقود: '+cp.fuelPrice+' ج.م/لتر',
+      '  تكلفة الصيانة: '+cp.maintPerKm+' ج.م/كم',
+    ];
+    var blob=new Blob([reportLines.join('\n')],{type:'text/plain;charset=utf-8'});
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fleet_report_'+new Date().toISOString().slice(0,10)+'.txt';a.click();
+    toast('✅ تم تصدير التقرير');
+  }
+  // ==================== END MANAGER MAP (ENHANCED) ====================
+
+  // ==================== DRIVER MESSAGING ====================
+  var _msgLog = [];
+
+  function buildMsgTruckList(){
+    var sel = document.getElementById('msg-truck-sel');
+    if(!sel) return;
+    sel.innerHTML = '<option value="">— للكل —</option>';
+    Object.keys(_lastPositions).forEach(function(key){
+      var p = _lastPositions[key];
+      if(!p) return;
+      var o = document.createElement('option');
+      o.value = key;
+      o.textContent = (p.truck||key) + (p.driverName?' — '+p.driverName:'') + (p.active&&(Date.now()-p.ts<300000)?' ●':'');
+      sel.appendChild(o);
+    });
+    // أضيف كمان العربيات من TRUCKS لو مفيش positions
+    if(typeof TRUCKS !== 'undefined'){
+      TRUCKS.forEach(function(t){
+        var key = String(t.T).replace(/[^a-zA-Z0-9_]/g,'_');
+        if(_lastPositions[key]) return; // موجود بالفعل
+        var o = document.createElement('option');
+        o.value = key;
+        o.textContent = t.T + ' — ' + (t.TT||'');
+        sel.appendChild(o);
+      });
+    }
+  }
+
+  function sendMsgToAll(){
+    var text = (document.getElementById('msg-text-inp').value||'').trim();
+    if(!text){ toast('⚠️ اكتب الرسالة الأول'); return; }
+    var payload = { text: text, ts: Date.now(), from: 'manager' };
+    fetch(FB_URL+'/driver_commands/broadcast.json',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    }).then(function(){
+      addMsgLog('📢 للكل', text, true);
+      document.getElementById('msg-text-inp').value = '';
+      toast('✅ تم الإرسال لكل السواقين');
+    }).catch(function(){
+      toast('⚠️ فشل الإرسال، تحقق من الاتصال');
+    });
+  }
+
+  function sendMsgToTruck(){
+    var text = (document.getElementById('msg-text-inp').value||'').trim();
+    var truckKey = document.getElementById('msg-truck-sel').value;
+    if(!text){ toast('⚠️ اكتب الرسالة الأول'); return; }
+    if(!truckKey){ sendMsgToAll(); return; }
+    var payload = { message:{ text: text, ts: Date.now(), read: false, from: 'manager' } };
+    fetch(FB_URL+'/driver_commands/'+truckKey+'.json',{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    }).then(function(){
+      var label = document.getElementById('msg-truck-sel').options[document.getElementById('msg-truck-sel').selectedIndex].textContent;
+      addMsgLog('🚚 '+label, text, true);
+      document.getElementById('msg-text-inp').value = '';
+      toast('✅ تم الإرسال للعربية');
+    }).catch(function(){
+      toast('⚠️ فشل الإرسال');
+    });
+  }
+
+  function addMsgLog(to, text, sent){
+    _msgLog.unshift({ to:to, text:text, sent:sent, time:new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}) });
+    var el = document.getElementById('msg-log');
+    if(!el) return;
+    el.innerHTML = _msgLog.slice(0,10).map(function(m){
+      return '<div style="background:#0d1422;border-radius:7px;padding:7px 10px;font-size:12px;border:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center;gap:8px">'+
+        '<span><span style="color:#fb7185;margin-left:6px">'+escHtml(m.to)+'</span><span style="color:#e8edf5">'+escHtml(m.text)+'</span></span>'+
+        '<span style="color:#4a5670;font-size:10px;white-space:nowrap">'+m.time+'</span>'+
+      '</div>';
+    }).join('');
+  }
+  // ==================== END DRIVER MESSAGING ====================
 
   function loadAllSavedData(){
     if(READONLY)return;
@@ -3452,49 +3940,6 @@ function renderCostAnalysis(){
   var gpsState={watchId:null,timerId:null,truck:null,truckType:null,points:[],distanceKm:0,startTime:null,lastSpeed:0};
 
   function gpsSaveTrips(){try{localStorage.setItem('fleet_gpsTrips',JSON.stringify(GPS_TRIPS));}catch(_e){}}
-
-  // =================== DRIVER COMMANDS ===================
-  function cmdTruckKey(){
-    var sel=document.getElementById('cmd-truck-sel');
-    return sel&&sel.value?sel.value.replace(/[^a-zA-Z0-9_]/g,'_'):'';
-  }
-  function cmdStatus(msg,ok){
-    var el=document.getElementById('cmd-status');
-    el.style.display='block';
-    el.style.background=ok?'rgba(0,212,170,.1)':'rgba(255,68,68,.1)';
-    el.style.border='1px solid '+(ok?'rgba(0,212,170,.3)':'rgba(255,68,68,.3)');
-    el.style.color=ok?'#00d4aa':'#ff6b6b';
-    el.textContent=msg;
-    setTimeout(function(){el.style.display='none';},4000);
-  }
-  function sendDriverMessage(){
-    var tk=cmdTruckKey();if(!tk){cmdStatus('⚠️ اختار العربية الأول',false);return;}
-    var msg=document.getElementById('cmd-msg-inp').value.trim();if(!msg){cmdStatus('⚠️ اكتب رسالة الأول',false);return;}
-    fetch(FB_URL+'/driver_commands/'+tk+'/message.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:msg,ts:Date.now(),read:false})})
-      .then(function(){cmdStatus('✅ الرسالة اتبعتت للسواق!',true);document.getElementById('cmd-msg-inp').value='';})
-      .catch(function(){cmdStatus('❌ فيه خطأ في الإرسال',false);});
-  }
-  function clearDriverMessage(){
-    var tk=cmdTruckKey();if(!tk){cmdStatus('⚠️ اختار العربية الأول',false);return;}
-    fetch(FB_URL+'/driver_commands/'+tk+'/message.json',{method:'DELETE'})
-      .then(function(){cmdStatus('✅ الرسالة اتمسحت',true);document.getElementById('cmd-msg-inp').value='';})
-      .catch(function(){cmdStatus('❌ خطأ في المسح',false);});
-  }
-  function sendSpeedLimit(){
-    var tk=cmdTruckKey();if(!tk){cmdStatus('⚠️ اختار العربية الأول',false);return;}
-    var spd=parseInt(document.getElementById('cmd-speed-inp').value);
-    if(!spd||spd<20||spd>200){cmdStatus('⚠️ ادخل سرعة بين 20 و 200',false);return;}
-    fetch(FB_URL+'/driver_commands/'+tk+'/maxSpeed.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(spd)})
-      .then(function(){cmdStatus('✅ حد السرعة اتبعت ('+spd+' كم/س)',true);})
-      .catch(function(){cmdStatus('❌ خطأ في الإرسال',false);});
-  }
-  function populateCmdTruckSel(){
-    var src=document.getElementById('gps-truck-sel');
-    var dst=document.getElementById('cmd-truck-sel');
-    if(!src||!dst)return;
-    dst.innerHTML=src.innerHTML;
-  }
-  // =================== END DRIVER COMMANDS ===================
 
   // =================== GITHUB UPLOAD ===================
   function openGithubModal(){
@@ -3578,7 +4023,6 @@ function renderCostAnalysis(){
     list.sort(function(a,b){return String(a.T).localeCompare(String(b.T),undefined,{numeric:true});});
     sel.innerHTML=list.map(function(t){return '<option value="'+escHtml(String(t.T))+'" data-tt="'+escHtml(String(t.TT))+'" data-cons="'+(t.cons||9)+'">🚚 '+escHtml(String(t.T))+' — '+escHtml(String(t.TT))+'</option>';}).join('');
     gpsTruckChanged();
-    populateCmdTruckSel();
   }
   function gpsTruckChanged(){
     var sel=document.getElementById('gps-truck-sel');if(!sel||!sel.options.length)return;
@@ -3716,13 +4160,28 @@ function renderCostAnalysis(){
     if(consInp&&parseFloat(consInp.value)>0)gpsState.cons=parseFloat(consInp.value);
     if(priceInp&&parseFloat(priceInp.value)>0)gpsState.price=parseFloat(priceInp.value);
     var dist=gpsState.distanceKm;
-    var cost=gpsState.cons>0?(dist/gpsState.cons*gpsState.price):0;
     var secs=Math.floor((Date.now()-gpsState.startTime)/1000);
     var hh=String(Math.floor(secs/3600)).padStart(2,'0'),mm=String(Math.floor((secs%3600)/60)).padStart(2,'0'),ss=String(secs%60).padStart(2,'0');
+    var fuelCost=gpsState.cons>0?(dist/gpsState.cons*gpsState.price):0;
+    // Full cost = وقود + صيانة فقط
+    var maintPerKm=0.50;
+    try{var cs=JSON.parse(localStorage.getItem('fleet_costSettings')||'{}');maintPerKm=cs.maintPerKm||0.50;}catch(_e){}
+    var maintCost=dist*maintPerKm;
+    var totalCost=fuelCost+maintCost;
+    var costPerKm=dist>0?(totalCost/dist):0;
     var de=document.getElementById('gps-live-distance');if(de)de.textContent=dist.toFixed(2)+' كم';
     var due=document.getElementById('gps-live-duration');if(due)due.textContent=hh+':'+mm+':'+ss;
     var se=document.getElementById('gps-live-speed');if(se)se.textContent=Math.round(gpsState.lastSpeed||0)+' كم/س';
-    var ce=document.getElementById('gps-live-cost');if(ce)ce.textContent=cost.toLocaleString(undefined,{maximumFractionDigits:2})+' ج.م';
+    var ce=document.getElementById('gps-live-cost');if(ce)ce.textContent=fuelCost.toLocaleString(undefined,{maximumFractionDigits:2})+' ج.م';
+    // Full cost breakdown box
+    var fcBox=document.getElementById('gps-full-cost-box');
+    if(fcBox&&!DRIVER_MODE){
+      fcBox.style.display='block';
+      var ef=document.getElementById('gps-cost-fuel');if(ef)ef.textContent=fuelCost.toFixed(2)+' ج.م';
+      var em=document.getElementById('gps-cost-maint');if(em)em.textContent=maintCost.toFixed(2)+' ج.م';
+      var et=document.getElementById('gps-cost-total');if(et)et.textContent=totalCost.toFixed(2)+' ج.م';
+      var ek=document.getElementById('gps-cost-per-km');if(ek)ek.textContent=(costPerKm>0?costPerKm.toFixed(2):'—')+' ج.م';
+    }
   }
 
   function stopGpsTrip(){
